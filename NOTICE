@@ -1,0 +1,25 @@
+Required Notice: Copyright (c) 2026 moomdate (https://github.com/moomdate/redline-gauge)
+
+REDLINE — racing dash for the CYD (ESP32-2432S028R)
+Licensed under the PolyForm Noncommercial License 1.0.0 (see LICENSE.md):
+free to use, study, modify and share for any NONCOMMERCIAL purpose.
+Selling it, or using it in a commercial product or service, is not permitted.
+For commercial licensing, contact the copyright holder.
+
+This license covers the source code and the artwork in tools/art/ and src/assets/.
+
+Third-party components
+----------------------
+Fonts (included, NOT covered by the PolyForm license — they keep their own):
+  * Barlow Condensed — Copyright 2017 The Barlow Project Authors
+    SIL Open Font License 1.1 — tools/font_src/OFL-BarlowCondensed.txt
+  * IBM Plex Mono — Copyright 2017 IBM Corp., Reserved Font Name "Plex"
+    SIL Open Font License 1.1 — tools/font_src/OFL-IBMPlexMono.txt
+  The bitmap tables in src/fonts/ are rasterised subsets of these fonts and
+  remain under the SIL Open Font License 1.1.
+
+Libraries (downloaded by PlatformIO at build time, not included in this repo):
+  * Arduino-ESP32 core (Espressif)         — LGPL-2.1
+  * TFT_eSPI (Bodmer)                      — FreeBSD / MIT (see library)
+  * TFT_Touch (Bodmer)                     — see library
+  * Unity test framework (ThrowTheSwitch)  — MIT, tests only

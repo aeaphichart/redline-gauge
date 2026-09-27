@@ -1,0 +1,119 @@
+// Host-side preview: compiles the REAL firmware UI + simulator code for macOS/Linux
+// and writes frames as PPM, so layout changes can be checked without flashing.
+//   tools/host_preview/run.sh           -> tools/host_preview/out/*.png (+ sim.gif)
+#include <stdio.h>
+#include <string.h>
+#include <vector>
+#include "data/gauge_bus.h"
+#include "data/sim_source.h"
+#include "ui/gauge_model.h"
+#include "ui/gauge_ui.h"
+#include "ui/settings_ui.h"
+#include "ui/theme.h"
+
+extern uint32_t g_host_ms;
+static uint16_t fb[320 * 240];
+static long pushedPixels = 0;
+
+static void push(int x, int y, int w, int h, const uint16_t *px) {
+    for (int r = 0; r < h; r++) memcpy(&fb[(y + r) * 320 + x], px + r * w, w * 2);
+    pushedPixels += (long)w * h;
+}
+
+static void save(const char *path) {
+    FILE *f = fopen(path, "wb");
+    fprintf(f, "P6 320 240 255\n");
+    for (int i = 0; i < 320 * 240; i++) {
+        uint16_t c = fb[i];
+        uint8_t rgb[3] = { (uint8_t)((c >> 11) << 3 | (c >> 13)), (uint8_t)(((c >> 5) & 63) << 2 | ((c >> 9) & 3)),
+                           (uint8_t)((c & 31) << 3 | ((c >> 2) & 7)) };
+        fwrite(rgb, 1, 3, f);
+    }
+    fclose(f);
+}
+
+static void staticFrame(const char *path, float rpm, float spd, float clt, float v, float iat, int gear,
+                        Link link, const char *msg, const char *mode) {
+    GaugeModel m;
+    GaugeView view;
+    m.setShiftRpm(7000);
+    bus::clear();
+    g_host_ms = 100000;
+    m.reset(g_host_ms - 754000);
+    bus::setLink(link, msg);
+    // settle the smoothing filters
+    for (int i = 0; i < 60; i++) {
+        g_host_ms += 33;
+        if (rpm >= 0) bus::publish(CH_RPM, rpm);
+        if (spd >= 0) bus::publish(CH_SPEED, spd);
+        if (clt > -99) bus::publish(CH_COOLANT, clt);
+        if (v > 0) bus::publish(CH_VOLTAGE, v);
+        if (iat > -99) bus::publish(CH_IAT, iat);
+        if (gear >= 0) bus::publish(CH_GEAR, gear);
+        GaugeSnapshot s;
+        bus::snapshot(s);
+        m.update(s, g_host_ms, mode, view);
+    }
+    view.shiftFlash = true; view.blink = true; view.dotOn = true;
+    gauge_ui::invalidate();
+    gauge_ui::render(view);
+    save(path);
+}
+
+int main() {
+    gauge_ui::begin(push, kThemes[THEME_ICE]);
+    for (int t = 0; t < THEME_COUNT; t++) {
+        char p[64];
+        gauge_ui::setTheme(kThemes[t]);
+        snprintf(p, sizeof p, "out/theme_%s.ppm", kThemes[t].key);
+        staticFrame(p, 5600, 86, 87, 13.9f, 42, 3, Link::Live, "", "OBD BT");
+        Settings st;
+        st.theme = t; st.source = SRC_OBD; st.shiftRpm = 6750; st.brightness = 80;
+        settings_ui::draw(st);
+        snprintf(p, sizeof p, "out/settings_%s.ppm", kThemes[t].key);
+        save(p);
+    }
+    gauge_ui::setTheme(kThemes[THEME_ICE]);
+    staticFrame("out/design.ppm", 5600, 86, 87, 13.9f, 42, 3, Link::Live, "", "OBD BT");
+    gauge_ui::setTheme(kThemes[THEME_LIME]);
+    staticFrame("out/shift.ppm", 7250, 142, 106, 11.6f, 72, 4, Link::Simulated, "", "SIM AUTO");
+    staticFrame("out/cold.ppm", 1150, 0, 45, 12.2f, 30, 0, Link::Live, "", "SERIAL");
+    gauge_ui::setTheme(kThemes[THEME_AMBER]);
+    staticFrame("out/nodata.ppm", -1, -1, -100, -1, -100, -1, Link::Connecting, "BT PAIRING", "OBD BT");
+
+    // ---- run the AUTO simulator for 150 s of virtual time ----
+    gauge_ui::setTheme(kThemes[THEME_ICE]);
+    SimSource sim(false);
+    GaugeModel m;
+    GaugeView view;
+    bus::clear();
+    g_host_ms = 1000;
+    sim.begin();
+    m.reset(g_host_ms);
+    gauge_ui::invalidate();
+    long frames = 0;
+    pushedPixels = 0;
+    int maxRpm = 0, maxSpd = 0, shiftFrames = 0;
+    for (int f = 0; f < 150 * 30; f++) {
+        for (int k = 0; k < 3; k++) { g_host_ms += 11; sim.step(0.011f); }
+        GaugeSnapshot s;
+        bus::snapshot(s);
+        m.update(s, g_host_ms, sim.name(), view);
+        gauge_ui::render(view);
+        frames++;
+        if (view.rpmText > maxRpm) maxRpm = view.rpmText;
+        if (view.speed > maxSpd) maxSpd = view.speed;
+        if (view.shift) shiftFrames++;
+        if (f % 6 == 0 && f < 150 * 30) {
+            char p[64];
+            snprintf(p, sizeof p, "out/sim_%05d.ppm", f / 6);
+            save(p);
+        }
+        if (f % 300 == 0)
+            printf("t=%5.1fs rpm=%5d spd=%3d gear=%2d clt=%3d v=%.2f iat=%d\n", f / 30.0, view.rpmText,
+                   view.speed, view.gear, view.coolant, view.volt, view.iat);
+    }
+    printf("frames=%ld avg pushed px/frame=%ld (%.1f%% of screen), max rpm %d, max speed %d, shift frames %d\n",
+           frames, pushedPixels / frames, 100.0 * pushedPixels / frames / 76800.0, maxRpm, maxSpd, shiftFrames);
+    return 0;
+}
