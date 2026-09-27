@@ -13,6 +13,7 @@
 #include <Preferences.h>
 #include <TFT_eSPI.h>
 #include <TFT_Touch.h>
+#include <driver/gpio.h>
 
 #include "config.h"
 #include "settings.h"
@@ -140,19 +141,32 @@ static void handleLine(char *line) {
         Serial.println("[gauge] data ignored — switch to SERIAL first (mode=serial)");
 }
 
-static void pollSerial() {
-    static char line[160];
-    static size_t len = 0;
-    while (Serial.available()) {
-        char c = (char)Serial.read();
-        if (c == '\n' || c == '\r') {
-            line[len] = 0;
-            if (len) handleLine(line);
-            len = 0;
-        } else if (len < sizeof(line) - 1) {
-            line[len++] = c;
+// Collects one text line per input; USB and the external UART each keep their own
+// buffer so interleaved bytes from the two can't corrupt each other.
+struct LineReader {
+    char   buf[160];
+    size_t len = 0;
+    void poll(Stream &in) {
+        while (in.available()) {
+            char c = (char)in.read();
+            if (c == '\n' || c == '\r') {
+                buf[len] = 0;
+                if (len) handleLine(buf);
+                len = 0;
+            } else if (len < sizeof(buf) - 1) {
+                buf[len++] = c;
+            }
         }
     }
+};
+
+static void pollSerial() {
+    static LineReader usb;
+    usb.poll(Serial);
+#if EXT_SERIAL_RX_PIN >= 0
+    static LineReader ext;
+    ext.poll(Serial2);
+#endif
 }
 
 static void dataTask(void *) {
@@ -293,6 +307,10 @@ static void pushToTft(int x, int y, int w, int h, const uint16_t *px) {
 
 void setup() {
     Serial.begin(SERIAL_BAUD);
+#if EXT_SERIAL_RX_PIN >= 0
+    Serial2.begin(EXT_SERIAL_BAUD, SERIAL_8N1, EXT_SERIAL_RX_PIN, -1);   // RX only
+    gpio_pullup_en((gpio_num_t)EXT_SERIAL_RX_PIN);   // idle-high when nothing is plugged in (no noise)
+#endif
     pinMode(PIN_LED_R, OUTPUT);
     pinMode(PIN_LED_G, OUTPUT);
     pinMode(PIN_LED_B, OUTPUT);

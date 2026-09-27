@@ -25,6 +25,13 @@ jobs:
         run: pio test -e native
       - name: Build firmware (both panel variants)
         run: pio run -e esp32dev -e cyd-noinvert
+      - name: Compile Arduino examples (Uno, Nano, Mega, Leonardo, ESP32)
+        run: |
+          for ex in examples/*/; do
+            n=$(basename "$ex")
+            pio ci --board uno --board nanoatmega328 --board megaatmega2560 \
+                   --board leonardo --board esp32dev "$ex$n.ino"
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: firmware

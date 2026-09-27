@@ -101,6 +101,10 @@ rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3
 Test from a Mac: `~/.platformio/penv/bin/python tools/serial_feed.py /dev/cu.usbserial-XXXX`
 (it sends `mode=serial` and a sweep of values automatically).
 
+**From an Arduino / another board:** wire its TX → CYD **GPIO 27** (CN1) + GND. That's a
+receive-only UART, so USB stays free. Ready-made sketches with wiring are in **[examples/](examples/README.md)**:
+`SerialSenderDemo` (test values) and `SerialSenderSensors` (RPM pulse, speed, battery, NTC temps).
+
 ### 4. CUSTOM — your own values (sensors wired straight to the ESP32, CAN, etc.) ← easiest
 Edit only **`src/my_sensors.cpp`**, then select SETUP → DATA SOURCE → CUSTOM:
 ```cpp
@@ -114,7 +118,7 @@ void mySensorsRead(GaugeInput &in) {
 - Ready-made helpers in `src/gauge_input.h`: `readDividerVolts`, `readNtcCelsius`, `PulseInput` (RPM/VSS from pulses).
 - Try it without wiring: set `EXAMPLE_FAKE_VALUES 1` in `my_sensors.cpp`.
 - Values coming from elsewhere (a CAN callback, a BLE notify): call `gauge::set(CH_RPM, v)` from any task. It is thread-safe.
-- Free CYD pins: GPIO 35 (P3, analog/input only), GPIO 22, 27 (CN1). Car signals are 12–14 V: always use a divider or opto-isolator.
+- Free CYD pins: GPIO 35 (P3, analog/input only), GPIO 22 (CN1). GPIO 27 too if you set `EXT_SERIAL_RX_PIN -1`. Car signals are 12–14 V: always use a divider or opto-isolator.
 
 For a completely new source type, subclass `DataSource` (`src/data/source.h`) and add it to `sources[]` in `main.cpp`.
 

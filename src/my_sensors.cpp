@@ -2,7 +2,8 @@
 //  YOUR SENSORS — edit this file to show real values on the gauge.
 //  Select it on the device: SETUP -> DATA SOURCE -> CUSTOM
 //
-//  CYD pins free for you:  GPIO 35 (P3, analog/input only) · GPIO 22, 27 (CN1)
+//  CYD pins free for you:  GPIO 35 (P3, analog/input only) · GPIO 22 (CN1)
+//  GPIO 27 (CN1) is the external serial input — set EXT_SERIAL_RX_PIN -1 in config.h to reuse it.
 //  Car signals are 12-14 V and noisy: always use a divider / opto-isolator.
 //
 //  Flip an example to 1 to try it, or write your own code in mySensorsRead().

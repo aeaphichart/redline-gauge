@@ -52,6 +52,13 @@
 // ---- Serial input (USB) ------------------------------------------------------
 #define SERIAL_BAUD      115200
 
+// Second, receive-only serial input for an external board (Arduino, ESP32, Pi …)
+// so USB stays free for flashing/logs. Wire: sender TX -> CYD GPIO 27 (CN1), GND -> GND.
+// 5 V boards (Uno/Nano/Mega) need a divider on TX: 1k to TX, 2k to GND, middle to GPIO 27.
+// Same line protocol as USB (see serial_source.h). Set -1 to free GPIO 27 for other uses.
+#define EXT_SERIAL_RX_PIN   27
+#define EXT_SERIAL_BAUD  115200
+
 // ---- Hardware (CYD) -----------------------------------------------------------
 #define PIN_SPEAKER          26
 #define PIN_LED_R             4     // RGB LED, active LOW
