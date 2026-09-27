@@ -4,6 +4,11 @@
 แสดงรอบเครื่อง ความเร็ว เกียร์ อุณหภูมิ และแรงดันไฟ
 มีตัวจำลองในตัว, เปลี่ยนธีมได้ 3 แบบ, และรับค่าจริงได้ 4 ทาง (OBD-II บลูทูธ, Serial, เซ็นเซอร์ต่อตรง, โค้ดของคุณเอง)
 
+<p align="center">
+  <a href="docs/demo.mp4"><img src="docs/demo.gif" width="240" alt="REDLINE บนบอร์ด CYD จริง"></a><br>
+  <sub>ทำงานบนบอร์ดจริง, <a href="docs/demo.mp4">ดูวิดีโอเต็ม (51 วินาที, MP4)</a></sub>
+</p>
+
 > English version: [README.md](README.md)
 
 | ICE BLUE | ACID LIME | AMBER |

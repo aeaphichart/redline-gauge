@@ -9,6 +9,11 @@ OBD-II Bluetooth, USB serial, or your own sensors.
 ![license](https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange)
 ![platform](https://img.shields.io/badge/ESP32-CYD%202.8%22-blue)
 
+<p align="center">
+  <a href="docs/demo.mp4"><img src="docs/demo.gif" width="240" alt="REDLINE running on a CYD: touch throttle, shift light and the settings page"></a><br>
+  <sub>Running on a real CYD, <a href="docs/demo.mp4">full demo video (51 s, MP4)</a></sub>
+</p>
+
 > 🇹🇭 คู่มือภาษาไทย (how each mode works, motorcycles/Honda Wave, wiring): **[README.th.md](README.th.md)**
 
 **Features**
