@@ -18,7 +18,9 @@ jobs:
             ~/.platformio
             ~/.cache/pip
           key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
-      - run: pip install platformio
+      # esptool (used to build bootloader.bin) breaks with click >= 8.2:
+      #   "ParamType.get_metavar() missing 1 required positional argument: 'ctx'"
+      - run: pip install platformio "click<8.2"
       - name: Unit tests (host)
         run: pio test -e native
       - name: Build firmware (both panel variants)
