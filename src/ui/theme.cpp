@@ -11,3 +11,9 @@ const Theme kThemes[THEME_COUNT] = {
     { "ACID LIME", "lime",  bg_lime,  0xB6FF00, 0xD4FF2A, 0xB6FF00, 0xFFF200 },
     { "AMBER",     "amber", bg_amber, 0xFF8A00, 0xFFB42A, 0x7CFF2E, 0xFFE000 },
 };
+
+// CRC32 of the boot-splash credit (birdlab.th logo mask + credit text + wordmark).
+// Checked by splash_ui::authentic(); must be updated only by the copyright holder.
+namespace splash_ui {
+extern const uint32_t kCreditCrc = 0x6EEE0E43;
+}

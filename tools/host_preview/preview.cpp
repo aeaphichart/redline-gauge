@@ -65,6 +65,14 @@ int main() {
     gauge_ui::begin(push, kThemes[THEME_ICE]);
     for (int t = 0; t < THEME_COUNT; t++) {
         char p[64];
+        splash_ui::draw(push, kThemes[t]);
+        splash_ui::progress(push, kThemes[t], 1.0f);   // completes the boot credit
+        splash_ui::progress(push, kThemes[t], 0.62f);
+        snprintf(p, sizeof p, "out/splash_%s.ppm", kThemes[t].key);
+        save(p);
+    }
+    for (int t = 0; t < THEME_COUNT; t++) {
+        char p[64];
         gauge_ui::setTheme(kThemes[t]);
         snprintf(p, sizeof p, "out/theme_%s.ppm", kThemes[t].key);
         staticFrame(p, 5600, 86, 87, 13.9f, 42, 3, Link::Live, "", "OBD BT");
@@ -72,13 +80,6 @@ int main() {
         st.theme = t; st.source = SRC_OBD; st.shiftRpm = 6750; st.brightness = 80;
         settings_ui::draw(st);
         snprintf(p, sizeof p, "out/settings_%s.ppm", kThemes[t].key);
-        save(p);
-    }
-    for (int t = 0; t < THEME_COUNT; t++) {
-        char p[64];
-        splash_ui::draw(push, kThemes[t]);
-        splash_ui::progress(push, kThemes[t], 0.62f);
-        snprintf(p, sizeof p, "out/splash_%s.ppm", kThemes[t].key);
         save(p);
     }
     gauge_ui::setTheme(kThemes[THEME_ICE]);

@@ -3,6 +3,7 @@
 #include "ui/shift_slots.h"
 #include "config.h"
 #include "ui/theme.h"
+#include "ui/splash_ui.h"
 #include "fonts/font_rpm.h"
 #include "fonts/font_speed.h"
 #include "fonts/font_value.h"
@@ -82,11 +83,13 @@ static void drawStatus(const GaugeView &v) {
     char key[64];
     uint32_t dot = v.link == Link::Live      ? s_theme->good
                  : v.link == Link::Simulated ? s_theme->accentBright : v.dotColor;
-    snprintf(key, sizeof key, "%s|%s|%06x|%d", v.mode, v.right, (unsigned)dot, v.dotOn);
+    bool official = splash_ui::authentic();
+    snprintf(key, sizeof key, "%s|%s|%06x|%d|%d", v.mode, v.right, (unsigned)dot, v.dotOn, official);
     if (!changed(RG_STATUS, key) || !beginRegion(R_STATUS)) return;
 
     if (v.dotOn) cv.fillCircle(21.5f, 15.5f, 2.3f, C(dot));
-    cv.text(font_small, 28, 19, STATUS_TITLE, C(C_STATUS));
+    if (official) cv.text(font_small, 28, 19, STATUS_TITLE, C(C_STATUS));
+    else          cv.text(font_small, 28, 19, "UNOFFICIAL", C(C_CRIT));
     cv.text(font_small, 104, 19, v.mode, C(s_theme->accentBright));
     bool msg = v.right[0] && (v.right[0] < '0' || v.right[0] > '9');
     cv.text(font_small, 206, 19, v.right, C(msg ? dot : C_STATUS), ALIGN_RIGHT);

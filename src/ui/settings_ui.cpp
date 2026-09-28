@@ -89,7 +89,7 @@ static void compose(Canvas &cv, const Settings &s) {
     for (int i = 0; i < cv.w * cv.h; i++) cv.px[i] = blend565(215, 0, cv.px[i]);
 
     cv.text(font_ui, 12, 20, "SETTINGS", C(t.accentBright), ALIGN_LEFT, 2);
-    cv.text(font_small, 100, 19, "REDLINE v" REDLINE_VERSION, C(C_MUTED));
+    cv.text(font_small, 100, 19, "REDLINE v" REDLINE_VERSION " · birdlab.th", C(C_MUTED));
     button(cv, t, R_DONE, "DONE", true);
     for (int x = 8; x < 312; x++)                                   // accent rule fading out
         cv.blendPixel(x, 30, C(t.accent), (uint8_t)(255 - (x - 8) * 200 / 304));

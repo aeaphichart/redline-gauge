@@ -79,7 +79,7 @@ static void applySettings(const Settings &next, bool repaint = true);
 static GaugeModel model;
 static void printHelp() {
     Serial.println(F(
-        "\n=== REDLINE " REDLINE_VERSION " ===\n"
+        "\n=== REDLINE " REDLINE_VERSION " — crafted by birdlab.th (birdlab.moomdate.tech) ===\n"
         "  mode=sim|touch|serial|obd|custom   theme=ice|lime|amber   shift=7000\n"
         "  bright=20..100   beep=on|off   peak=reset   help\n"
         "data (SERIAL mode):  rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3\n"
@@ -328,12 +328,12 @@ void setup() {
     setBacklight(settings.brightness);
     touch.setCal(526, 3443, 750, 3377, 320, 240, 1); // proven values for this board
 
-#if SPLASH_MS > 0
-    // Boot splash on the saved theme; its mini shift bar fills as a progress bar.
+    // Boot splash with the birdlab.th credit (required by NOTICE); its mini shift
+    // bar fills as a progress bar. A tap skips it, but only after kSkipAfterMs.
     splash_ui::draw(pushToTft, kThemes[settings.theme]);
-    for (uint32_t t0 = millis(), t; (t = millis() - t0) < SPLASH_MS;) {
-        splash_ui::progress(pushToTft, kThemes[settings.theme], (float)t / SPLASH_MS);
-        if (touch.Pressed()) break;                  // tap to skip
+    for (uint32_t t0 = millis(), t; (t = millis() - t0) < splash_ui::kDurationMs;) {
+        splash_ui::progress(pushToTft, kThemes[settings.theme], (float)t / splash_ui::kDurationMs);
+        if (t > splash_ui::kSkipAfterMs && touch.Pressed()) break;
         delay(16);
     }
     splash_ui::progress(pushToTft, kThemes[settings.theme], 1.0f);
@@ -343,7 +343,6 @@ void setup() {
     toneOffAt = 0;
     delay(155);
     while (touch.Pressed()) delay(10);               // don't let the skip-tap reach the gauge
-#endif
 
     gauge_ui::begin(pushToTft, kThemes[settings.theme]);
     model.setShiftRpm(settings.shiftRpm);

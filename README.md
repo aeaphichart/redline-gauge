@@ -53,7 +53,9 @@ ls /dev/cu.*                                                   # find the port (
 
 ### Boot splash
 The REDLINE wordmark appears on your saved theme, and its mini shift bar fills as the board starts.
-Credit: *crafted by birdlab.th*. It shows for `SPLASH_MS` (1.8 s, set in `config.h`). Tap the screen to skip it, or set `SPLASH_MS 0` to turn it off.
+Credit: *crafted by birdlab.th*. The splash lasts 1.8 s; you can tap to skip it after 1 s.
+The credit is a **Required Notice** of the license (see [NOTICE](NOTICE)), so it can't be turned off.
+If the splash is removed or the logo is changed, the status bar shows `UNOFFICIAL` instead of REDLINE.
 
 ### Settings page
 - **THEME**: ICE BLUE / ACID LIME / AMBER (tap a thumbnail to change the theme immediately)

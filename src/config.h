@@ -76,5 +76,4 @@
 
 // ---- UI ------------------------------------------------------------------------
 #define UI_FPS               30
-#define SPLASH_MS          1800     // boot splash duration (tap to skip), 0 = no splash
 #define STATUS_TITLE       "REDLINE"

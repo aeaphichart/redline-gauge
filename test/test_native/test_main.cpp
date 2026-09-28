@@ -303,6 +303,17 @@ static void test_theme_switch_repaints_whole_screen() {
 }
 
 // ---- splash ---------------------------------------------------------------------------------
+static void test_credit_integrity() {
+    TEST_ASSERT_FALSE(splash_ui::authentic());                     // splash not finished yet
+    TEST_ASSERT_EQUAL_HEX32(0x6EEE0E43, splash_ui::creditCrc());   // logo/credit untouched
+    gauge_ui::begin(push, kThemes[0]);
+    splash_ui::draw(push, kThemes[0]);
+    splash_ui::progress(push, kThemes[0], 0.99f);
+    TEST_ASSERT_FALSE(splash_ui::authentic());
+    splash_ui::progress(push, kThemes[0], 1.0f);
+    TEST_ASSERT_TRUE(splash_ui::authentic());
+}
+
 static void test_splash_renders_every_theme() {
     TEST_ASSERT_TRUE(fontHas(font_title, "REDLINE"));
     TEST_ASSERT_TRUE(fontHas(font_small, "RACING DASH FOR THE CYD crafted by v0123456789."));
@@ -357,6 +368,7 @@ static void test_settings_limits() {
 
 int main(int, char **) {
     UNITY_BEGIN();
+    RUN_TEST(test_credit_integrity);             // first: needs a fresh boot state
     RUN_TEST(test_rgb565_and_blend);
     RUN_TEST(test_canvas_clips_and_rejects_oversize);
     RUN_TEST(test_tabular_digits_have_equal_width);

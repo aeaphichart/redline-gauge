@@ -4,8 +4,31 @@
 #include "assets/logo_birdlab.h"
 #include "fonts/font_title.h"
 #include "fonts/font_small.h"
+#include <string.h>
 
 namespace splash_ui {
+
+extern const uint32_t kCreditCrc;   // expected value, kept in theme.cpp
+static bool s_completed = false;
+static const char *const kCredit = "crafted by";
+static const char *const kWordmark = "REDLINE";
+
+static uint32_t crc32(uint32_t crc, const uint8_t *p, size_t n) {
+    crc = ~crc;
+    while (n--) {
+        crc ^= *p++;
+        for (int k = 0; k < 8; k++) crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1)));
+    }
+    return ~crc;
+}
+
+uint32_t creditCrc() {
+    uint32_t c = crc32(0, logo_birdlab, sizeof logo_birdlab);
+    c = crc32(c, (const uint8_t *)kCredit, strlen(kCredit));
+    return crc32(c, (const uint8_t *)kWordmark, strlen(kWordmark));
+}
+
+bool authentic() { return s_completed && creditCrc() == kCreditCrc; }
 
 #define C_RED    0xff2424
 #define C_WHITE  0xffffff
@@ -52,9 +75,9 @@ static void compose(Canvas &cv, const Theme &t, float p) {
     backdrop(cv);
 
     // wordmark: RED in red, LINE in white, soft drop shadow
-    int wRed = cv.textWidth(font_title, "RED", 1), wAll = cv.textWidth(font_title, "REDLINE", 1);
+    int wRed = cv.textWidth(font_title, "RED", 1), wAll = cv.textWidth(font_title, kWordmark, 1);
     int x = (320 - wAll) / 2, base = 104;
-    cv.text(font_title, x + 2, base + 3, "REDLINE", 0x0000, ALIGN_LEFT, 1);
+    cv.text(font_title, x + 2, base + 3, kWordmark, 0x0000, ALIGN_LEFT, 1);
     cv.text(font_title, x, base, "RED", C(C_RED), ALIGN_LEFT, 1);
     cv.text(font_title, x + wRed + 1, base, "LINE", C(C_WHITE), ALIGN_LEFT, 1);
 
@@ -64,7 +87,7 @@ static void compose(Canvas &cv, const Theme &t, float p) {
     cv.text(font_small, 160, 168, "v" REDLINE_VERSION, C(t.accentBright), ALIGN_CENTER, 1);
 
     // credit: "crafted by" + birdlab.th logo (alpha mask tinted light grey)
-    const char *label = "crafted by";
+    const char *label = kCredit;
     int tw = cv.textWidth(font_small, label, 1);
     int gx = (320 - (tw + 8 + LOGO_BIRDLAB_W)) / 2, ly = 200;
     cv.text(font_small, gx, ly + LOGO_BIRDLAB_H / 2 + 3, label, C(C_MUTED), ALIGN_LEFT, 1);
@@ -89,6 +112,7 @@ void progress(PushFn push, const Theme &t, float p) {
     Canvas &cv = gauge_ui::canvas();
     if (p < 0) p = 0;
     if (p > 1) p = 1;
+    if (p >= 1) s_completed = true;
     if (!cv.begin(kBarX - 2, kBarY - 1, kBarW + 4, kBarH + 2, t.background)) return;
     backdrop(cv);
     bar(cv, t, p);
