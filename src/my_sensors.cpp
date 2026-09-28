@@ -10,9 +10,15 @@
 // ============================================================================
 #include "gauge_input.h"
 
+#ifndef EXAMPLE_BATTERY_GPIO35       // (#ifndef so CI can build with every example on)
 #define EXAMPLE_BATTERY_GPIO35   0   // 47k/10k divider from +12V to GPIO 35
+#endif
+#ifndef EXAMPLE_RPM_PULSE_GPIO22
 #define EXAMPLE_RPM_PULSE_GPIO22 0   // tach / ignition pulse (via opto) on GPIO 22
+#endif
+#ifndef EXAMPLE_FAKE_VALUES
 #define EXAMPLE_FAKE_VALUES      0   // no wiring: animated test values
+#endif
 
 #if EXAMPLE_RPM_PULSE_GPIO22
 static PulseInput tach;

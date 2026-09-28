@@ -198,8 +198,12 @@ static void test_gear_estimate() {
         float wheelRpm = (kmh / 3.6f) / TIRE_CIRCUMFERENCE_M * 60.0f;
         TEST_ASSERT_EQUAL_INT(g + 1, estimateGear(wheelRpm * ratios[g] * FINAL_DRIVE, kmh));
     }
+#if GEAR_COUNT > 0
     TEST_ASSERT_EQUAL_INT(0, estimateGear(900, 1));          // standing still
     TEST_ASSERT_EQUAL_INT(0, estimateGear(6000, 20));        // clutch slipping, no ratio fits
+#else
+    TEST_ASSERT_EQUAL_INT(-1, estimateGear(3000, 60));       // gears disabled: always hidden
+#endif
 }
 
 static void test_model_levels_and_shift() {
@@ -261,7 +265,11 @@ static void test_simulator_stays_physical() {
         for (int c = 0; c < CH_COUNT; c++) TEST_ASSERT_FALSE(isnan(s.value[c]));
         TEST_ASSERT_TRUE(s.value[CH_RPM] >= 0 && s.value[CH_RPM] <= RPM_MAX);
         TEST_ASSERT_TRUE(s.value[CH_SPEED] >= 0 && s.value[CH_SPEED] < 260);
+#if GEAR_COUNT > 0
         TEST_ASSERT_TRUE(s.value[CH_GEAR] >= 0 && s.value[CH_GEAR] <= GEAR_COUNT);
+#else
+        TEST_ASSERT_EQUAL_UINT32(0, s.stamp[CH_GEAR]);       // GEAR_COUNT 0: sim sends no gear
+#endif
         TEST_ASSERT_TRUE(s.value[CH_COOLANT] > 20 && s.value[CH_COOLANT] < 125);
         TEST_ASSERT_TRUE(s.value[CH_VOLTAGE] > 9 && s.value[CH_VOLTAGE] < 15.5f);
         if (s.value[CH_RPM] >= RPM_SHIFT) sawShift = true;

@@ -195,7 +195,9 @@ void SimSource::step(float dt) {
         acc_ = 0;
         bus::publish(CH_RPM, rpm_);
         bus::publish(CH_SPEED, speed_ * 3.6f);
-        bus::publish(CH_GEAR, (float)gear_);
+#if GEAR_COUNT > 0
+        bus::publish(CH_GEAR, (float)gear_);          // GEAR_COUNT 0 = no gear shown anywhere
+#endif
         bus::publish(CH_COOLANT, coolant_);
         bus::publish(CH_VOLTAGE, volt_);
         bus::publish(CH_IAT, iat_);

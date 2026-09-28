@@ -25,6 +25,10 @@ jobs:
         run: pio test -e native
       - name: Build firmware (both panel variants)
         run: pio run -e esp32dev -e cyd-noinvert
+      - name: Build with every my_sensors.cpp example enabled (PulseInput, ADC helpers)
+        env:
+          PLATFORMIO_BUILD_FLAGS: -DEXAMPLE_BATTERY_GPIO35=1 -DEXAMPLE_RPM_PULSE_GPIO22=1 -DEXAMPLE_FAKE_VALUES=1
+        run: pio run -e esp32dev
       - name: Compile Arduino examples (Uno, Nano, Mega, Leonardo, ESP32)
         run: |
           for ex in examples/*/; do

@@ -35,7 +35,8 @@
 
 // ---- Gear estimation (used when the source doesn't report a gear, e.g. OBD) --
 // gear = the ratio closest to  engine_rpm / wheel_rpm / FINAL_DRIVE.
-// Defaults are a typical 6-speed hatchback; set GEAR_COUNT 0 to hide the gear.
+// Defaults are a typical 6-speed hatchback. GEAR_COUNT 0 = no estimate and the
+// simulator shows no gear; a source that sends gear= explicitly still shows it.
 #define GEAR_COUNT           6
 #define GEAR_RATIOS        { 3.636f, 2.235f, 1.521f, 1.137f, 0.891f, 0.707f }
 #define FINAL_DRIVE        4.06f

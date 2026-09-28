@@ -112,12 +112,24 @@ receive-only UART, so USB stays free. Ready-made sketches with wiring are in **[
 `SerialSenderDemo` (test values) and `SerialSenderSensors` (RPM pulse, speed, battery, NTC temps).
 
 ### 4. CUSTOM — your own values (sensors wired straight to the ESP32, CAN, etc.) ← easiest
-Edit only **`src/my_sensors.cpp`**, then select SETUP → DATA SOURCE → CUSTOM:
+Edit only **`src/my_sensors.cpp`**: replace its two functions with your own, flash, then select SETUP → DATA SOURCE → CUSTOM.
+A complete example (battery + RPM, one sensor per pin):
 ```cpp
+#include "gauge_input.h"
+
+static PulseInput tach;                              // declared once, outside the functions
+
+void mySensorsBegin() {
+    analogSetPinAttenuation(35, ADC_11db);           // GPIO 35: full 0..3.1 V range
+    tach.begin(22, 60.0f / 2);                       // GPIO 22, 2 pulses per rev (4-cyl)
+}
+
 void mySensorsRead(GaugeInput &in) {
-    in.voltage = readDividerVolts(35, 47000, 10000);   // 47k/10k divider from +12V
-    in.coolant = readNtcCelsius(35, 2200, 2500, 3950); // NTC sender
-    in.rpm     = tach.value();                         // PulseInput on the ignition signal
+    in.voltage = readDividerVolts(35, 47000, 10000); // battery via 47k/10k divider on GPIO 35
+    in.rpm     = tach.value();                       // ignition pulse via opto on GPIO 22
+    // A second analog sensor needs its own pin, e.g. an NTC on GPIO 27
+    // (set EXT_SERIAL_RX_PIN -1 in config.h first):
+    // in.coolant = readNtcCelsius(27, 2200, 2500, 3950);
 }
 ```
 - Set only the fields you have. Anything left as `NAN` shows `--`.

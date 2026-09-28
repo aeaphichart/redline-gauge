@@ -111,12 +111,24 @@ rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3
 ระหว่างที่บลูทูธกำลังค้นหา ถ้าเปลี่ยนโหมด จะเปลี่ยนหลังการค้นหารอบนั้นจบ (สูงสุด ~10 วินาที)
 
 ### CUSTOM — เซ็นเซอร์ของคุณเอง (ง่ายที่สุดสำหรับค่าจริง)
-แก้ไฟล์เดียว **`src/my_sensors.cpp`** แล้วเลือก DATA SOURCE → CUSTOM:
+แก้ไฟล์เดียว **`src/my_sensors.cpp`** โดยเอาโค้ดของคุณแทน 2 ฟังก์ชันในไฟล์ แฟลชใหม่ แล้วเลือก DATA SOURCE → CUSTOM
+ตัวอย่างนี้ใช้ได้ครบ (แบต + รอบ ใช้ขาละ 1 เซ็นเซอร์):
 ```cpp
+#include "gauge_input.h"
+
+static PulseInput tach;                              // ประกาศครั้งเดียว ไว้นอกฟังก์ชัน
+
+void mySensorsBegin() {
+    analogSetPinAttenuation(35, ADC_11db);           // GPIO 35 วัดได้เต็มช่วง 0..3.1 V
+    tach.begin(22, 60.0f / 2);                       // GPIO 22, 2 พัลส์ต่อรอบ (รถ 4 สูบ)
+}
+
 void mySensorsRead(GaugeInput &in) {
-    in.voltage = readDividerVolts(35, 47000, 10000);    // แบต 12V ผ่านตัวต้านทานแบ่งแรงดัน
-    in.coolant = readNtcCelsius(35, 2200, 2500, 3950);  // เซ็นเซอร์อุณหภูมิแบบ NTC
-    in.rpm     = tach.value();                          // สัญญาณรอบจากคอยล์/ปิคอัพ (ผ่าน opto)
+    in.voltage = readDividerVolts(35, 47000, 10000); // แบตผ่าน divider 47k/10k เข้า GPIO 35
+    in.rpm     = tach.value();                       // สัญญาณรอบผ่าน opto เข้า GPIO 22
+    // เซ็นเซอร์อนาล็อกตัวที่สองต้องใช้ขาของตัวเอง เช่น NTC ที่ GPIO 27
+    // (ตั้ง EXT_SERIAL_RX_PIN -1 ใน config.h ก่อน):
+    // in.coolant = readNtcCelsius(27, 2200, 2500, 3950);
 }
 ```
 - ใส่เฉพาะค่าที่มี ค่าที่ไม่ใส่จะแสดง `--`

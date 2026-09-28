@@ -72,11 +72,7 @@ private:
     volatile uint32_t last_ = 0, period_ = 0;
     uint32_t timeout_ = 500000;
     float scale_ = 1;
-    static void IRAM_ATTR isr(void *arg) {
-        PulseInput *p = (PulseInput *)arg;
-        uint32_t now = micros(), d = now - p->last_;
-        if (d < 200) return;                                     // glitch filter (5 kHz max)
-        p->period_ = p->period_ ? (p->period_ * 3 + d) / 4 : d;  // light smoothing
-        p->last_ = now;
-    }
+    // Defined in gauge_input.cpp: an IRAM_ATTR function defined inline in a header
+    // fails to link on Xtensa ("dangerous relocation: l32r: literal placed after use").
+    static void IRAM_ATTR isr(void *arg);
 };

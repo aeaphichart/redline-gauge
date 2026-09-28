@@ -125,6 +125,7 @@ static void handleLine(char *line) {
         s.beep = !strncasecmp(v, "on", 2) || *v == '1';
     } else if (!strncasecmp(p, "peak", 4)) {
         model.resetPeaks();
+        Serial.println("[gauge] ok  peak reset");
         return;
     } else if (!strncasecmp(p, "help", 4) || *p == '?') {
         printHelp();
@@ -135,11 +136,23 @@ static void handleLine(char *line) {
 
     if (changed) {
         applySettings(s);
+        // confirm, so someone typing into `pio device monitor` sees it worked
+        Serial.printf("[gauge] ok  theme=%s shift=%u bright=%u%% beep=%s source=%s\n",
+                      kThemes[settings.theme].key, settings.shiftRpm, settings.brightness,
+                      settings.beep ? "on" : "off", sources[settings.source]->name());
         return;
     }
     int n = SerialSource::feed(p, activeSrc == SRC_SERIAL);
-    if (n && activeSrc != SRC_SERIAL)
+    // An external board may stream 20 lines/s: each hint prints at most every 5 s.
+    static uint32_t lastIgnored = 0, lastUnknown = 0;
+    uint32_t now = millis();
+    if (n && activeSrc != SRC_SERIAL && (!lastIgnored || now - lastIgnored > 5000)) {
         Serial.println("[gauge] data ignored — switch to SERIAL first (mode=serial)");
+        lastIgnored = now;
+    } else if (!n && (!lastUnknown || now - lastUnknown > 5000)) {
+        Serial.printf("[gauge] ? unknown: '%.40s' — type help\n", p);
+        lastUnknown = now;
+    }
 }
 
 // Collects one text line per input; USB and the external UART each keep their own
