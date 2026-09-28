@@ -9,6 +9,7 @@
 #include "ui/gauge_model.h"
 #include "ui/gauge_ui.h"
 #include "ui/settings_ui.h"
+#include "ui/splash_ui.h"
 #include "ui/theme.h"
 
 extern uint32_t g_host_ms;
@@ -71,6 +72,13 @@ int main() {
         st.theme = t; st.source = SRC_OBD; st.shiftRpm = 6750; st.brightness = 80;
         settings_ui::draw(st);
         snprintf(p, sizeof p, "out/settings_%s.ppm", kThemes[t].key);
+        save(p);
+    }
+    for (int t = 0; t < THEME_COUNT; t++) {
+        char p[64];
+        splash_ui::draw(push, kThemes[t]);
+        splash_ui::progress(push, kThemes[t], 0.62f);
+        snprintf(p, sizeof p, "out/splash_%s.ppm", kThemes[t].key);
         save(p);
     }
     gauge_ui::setTheme(kThemes[THEME_ICE]);

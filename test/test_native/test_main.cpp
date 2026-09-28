@@ -14,6 +14,9 @@
 #include "ui/gauge_model.h"
 #include "ui/gauge_ui.h"
 #include "ui/settings_ui.h"
+#include "ui/splash_ui.h"
+#include "fonts/font_title.h"
+#include "assets/logo_birdlab.h"
 #include "ui/shift_slots.h"
 #include "ui/theme.h"
 #include "fonts/font_label.h"
@@ -299,6 +302,29 @@ static void test_theme_switch_repaints_whole_screen() {
     }
 }
 
+// ---- splash ---------------------------------------------------------------------------------
+static void test_splash_renders_every_theme() {
+    TEST_ASSERT_TRUE(fontHas(font_title, "REDLINE"));
+    TEST_ASSERT_TRUE(fontHas(font_small, "RACING DASH FOR THE CYD crafted by v0123456789."));
+    TEST_ASSERT_TRUE(LOGO_BIRDLAB_W > 60 && LOGO_BIRDLAB_W < 200 && LOGO_BIRDLAB_H < 40);
+    for (int t = 0; t < THEME_COUNT; t++) {
+        pushedPx = 0;
+        memset(fb, 0, sizeof fb);
+        splash_ui::draw(push, kThemes[t]);
+        TEST_ASSERT_EQUAL_INT(320 * 240, (int)pushedPx);            // exactly one full screen
+        long before = pushedPx;
+        splash_ui::progress(push, kThemes[t], 0.5f);
+        TEST_ASSERT_TRUE(pushedPx - before < 320 * 30);             // progress = small region only
+        splash_ui::progress(push, kThemes[t], -3.0f);               // out-of-range input is clamped
+        splash_ui::progress(push, kThemes[t], 9.0f);
+        // the credit logo actually landed on screen: bright pixels near the bottom
+        int bright = 0;
+        for (int y = 200; y < 230; y++)
+            for (int x = 0; x < 320; x++) if ((fb[y * 320 + x] >> 11) > 26) bright++;
+        TEST_ASSERT_TRUE_MESSAGE(bright > 150, kThemes[t].name);
+    }
+}
+
 // ---- settings page -----------------------------------------------------------------------------------
 static void test_settings_taps() {
     gauge_ui::begin(push, kThemes[0]);
@@ -347,6 +373,7 @@ int main(int, char **) {
     RUN_TEST(test_simulator_stays_physical);
     RUN_TEST(test_renderer_only_pushes_changes);
     RUN_TEST(test_theme_switch_repaints_whole_screen);
+    RUN_TEST(test_splash_renders_every_theme);
     RUN_TEST(test_settings_taps);
     RUN_TEST(test_settings_limits);
     return UNITY_END();

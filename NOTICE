@@ -8,6 +8,10 @@ For commercial licensing, contact the copyright holder.
 
 This license covers the source code and the artwork in tools/art/ and src/assets/.
 
+The birdlab.th logo (tools/art/birdlab-logo.png, src/assets/logo_birdlab.h) is
+the project author's brand, shown on the boot splash as credit. Keep it when you
+share REDLINE or modified versions of it. Do not use it to brand other products.
+
 Third-party components
 ----------------------
 Fonts (included, NOT covered by the PolyForm license — they keep their own):

@@ -25,6 +25,7 @@
 #include "ui/gauge_model.h"
 #include "ui/gauge_ui.h"
 #include "ui/settings_ui.h"
+#include "ui/splash_ui.h"
 #include "ui/theme.h"
 
 static TFT_eSPI  tft;
@@ -326,6 +327,23 @@ void setup() {
     ledcAttach(TFT_BL, 5000, 8);                     // backlight PWM (after init set it HIGH)
     setBacklight(settings.brightness);
     touch.setCal(526, 3443, 750, 3377, 320, 240, 1); // proven values for this board
+
+#if SPLASH_MS > 0
+    // Boot splash on the saved theme; its mini shift bar fills as a progress bar.
+    splash_ui::draw(pushToTft, kThemes[settings.theme]);
+    for (uint32_t t0 = millis(), t; (t = millis() - t0) < SPLASH_MS;) {
+        splash_ui::progress(pushToTft, kThemes[settings.theme], (float)t / SPLASH_MS);
+        if (touch.Pressed()) break;                  // tap to skip
+        delay(16);
+    }
+    splash_ui::progress(pushToTft, kThemes[settings.theme], 1.0f);
+    beep(2600, 25);                                  // short "ready" chirp (if beep is on)
+    delay(25);
+    ledcWriteTone(PIN_SPEAKER, 0);
+    toneOffAt = 0;
+    delay(155);
+    while (touch.Pressed()) delay(10);               // don't let the skip-tap reach the gauge
+#endif
 
     gauge_ui::begin(pushToTft, kThemes[settings.theme]);
     model.setShiftRpm(settings.shiftRpm);

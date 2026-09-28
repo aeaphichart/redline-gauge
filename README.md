@@ -27,9 +27,9 @@ OBD-II Bluetooth, USB serial, or your own sensors.
 |---|---|---|
 | ![](docs/theme_ice.png) | ![](docs/theme_lime.png) | ![](docs/theme_amber.png) |
 
-| Settings | Shift light + warnings | Waiting for link |
+| Boot splash | Settings | Shift light + warnings |
 |---|---|---|
-| ![](docs/settings_lime.png) | ![](docs/shift.png) | ![](docs/nodata.png) |
+| ![](docs/splash.png) | ![](docs/settings_lime.png) | ![](docs/shift.png) |
 
 `docs/sim.gif` is a real render from the firmware code (SIM AUTO mode), produced by the host preview.
 
@@ -50,6 +50,10 @@ ls /dev/cu.*                                                   # find the port (
 | **Tap SETUP** (bottom-right) or the status bar | Open the settings page |
 | **Hold the main area** in SIM TOUCH | Throttle: further right = more throttle, release to coast |
 | **Long-press the main area** (other modes) | Reset PEAK RPM |
+
+### Boot splash
+The REDLINE wordmark appears on your saved theme, and its mini shift bar fills as the board starts.
+Credit: *crafted by birdlab.th*. It shows for `SPLASH_MS` (1.8 s, set in `config.h`). Tap the screen to skip it, or set `SPLASH_MS 0` to turn it off.
 
 ### Settings page
 - **THEME**: ICE BLUE / ACID LIME / AMBER (tap a thumbnail to change the theme immediately)
