@@ -11,6 +11,8 @@ CI compiles them for Uno, Nano, Mega, Leonardo and ESP32.
 
 ## Wiring
 
+![Arduino Uno / Nano to CYD wiring](../docs/wiring/wiring-arduino-serial.svg)
+
 The gauge listens on a **receive-only serial input on GPIO 27** (the CN1 connector),
 so the CYD's USB port stays free for flashing and logs. 115200 baud, 8N1.
 
@@ -64,6 +66,8 @@ rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3
 | `SerialSenderSensors` | อ่านเซ็นเซอร์จริงด้วย Uno/Nano: รอบ (พัลส์จุดระเบิด), ความเร็ว, แบต, อุณหภูมิ NTC |
 
 ## ต่อสาย
+
+![ต่อ Arduino Uno / Nano เข้า CYD](../docs/wiring/wiring-arduino-serial.svg)
 - ขา **TX ของ Arduino → GPIO 27 ของ CYD** (ช่อง CN1) และ **GND → GND** ใช้แค่ 2 เส้นนี้
 - บอร์ด **5V** (Uno, Nano, Mega) **ต้องมีตัวต้านทานแบ่งแรงดัน**: TX → 1k → จุดกลาง → 2k → GND แล้วต่อจุดกลางเข้า GPIO 27
   (ลด 5V เหลือ 3.3V ถ้าไม่ใส่อาจทำให้ขา ESP32 เสีย)

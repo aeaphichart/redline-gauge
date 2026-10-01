@@ -81,6 +81,8 @@ The right side shows the session time, or a status message such as `BT PAIRING`,
 
 ## Data sources
 
+![Where REDLINE gets its data](docs/wiring/system-overview.svg)
+
 ### 1. SIM AUTO / SIM TOUCH (simulator)
 A physics-based car model: torque curve, 6-speed gearbox with auto-shift/kick-down, clutch launch, drag, braking,
 coolant/intake heat model, and alternator voltage. It even cranks on start-up (voltage dips to ~10.6 V).
@@ -111,6 +113,8 @@ Test from a Mac: `~/.platformio/penv/bin/python tools/serial_feed.py /dev/cu.usb
 receive-only UART, so USB stays free. Ready-made sketches with wiring are in **[examples/](examples/README.md)**:
 `SerialSenderDemo` (test values) and `SerialSenderSensors` (RPM pulse, speed, battery, NTC temps).
 
+![Arduino Uno / Nano to CYD wiring](docs/wiring/wiring-arduino-serial.svg)
+
 ### 4. CUSTOM — your own values (sensors wired straight to the ESP32, CAN, etc.) ← easiest
 Edit only **`src/my_sensors.cpp`**: replace its two functions with your own, flash, then select SETUP → DATA SOURCE → CUSTOM.
 A complete example (battery + RPM, one sensor per pin):
@@ -139,6 +143,18 @@ void mySensorsRead(GaugeInput &in) {
 - Free CYD pins: GPIO 35 (P3, analog/input only), GPIO 22 (CN1). GPIO 27 too if you set `EXT_SERIAL_RX_PIN -1`. Car signals are 12–14 V: always use a divider or opto-isolator.
 
 For a completely new source type, subclass `DataSource` (`src/data/source.h`) and add it to `sources[]` in `main.cpp`.
+
+#### Wiring diagrams
+
+Check the labels printed next to each connector first — the pin order differs between CYD batches.
+
+![CYD connectors](docs/wiring/cyd-connectors.svg)
+
+| Battery voltage → GPIO 35 | Temperature sender (NTC) |
+|---|---|
+| ![Battery divider](docs/wiring/wiring-battery.svg) | ![NTC](docs/wiring/wiring-ntc.svg) |
+
+![RPM pulse via PC817](docs/wiring/wiring-rpm-opto.svg)
 
 ## Motorcycles (e.g. Honda Wave)
 OBD BT does **not** work on Honda bikes: their 4-pin DLC speaks Honda's own K-Line protocol, not car OBD-II.
