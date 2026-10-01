@@ -56,7 +56,7 @@ ls /dev/cu.*                     # หาพอร์ต (เลขเปลี�
 - **THEME** — แตะรูปตัวอย่างเพื่อเปลี่ยนธีม เปลี่ยนทันทีทั้งพื้นหลัง บาร์รอบ ตัวอักษร
 - **DATA SOURCE** — เลือกแหล่งข้อมูล (ดูหัวข้อ 3)
 - **SHIFT LIGHT RPM** — รอบที่ไฟเตือนเปลี่ยนเกียร์ ปรับทีละ 250
-- **BRIGHTNESS** — ความสว่างจอ 20–100%
+- **BRIGHTNESS** — ซ่อนไว้ เพราะไฟหลังจอ CYD ดับทันทีเมื่อหรี่ด้วย PWM จึงเปิดเต็มตลอด ถ้าบอร์ดที่ใช้หรี่ได้ ตั้ง `BACKLIGHT_DIMMING 1` ใน `config.h` จะได้ปุ่มปรับ 20–100% กลับมา
 - **BEEP ON/OFF** — เสียงเตือน, **RESET PEAK**, **DONE** กลับหน้าเกจ
 
 ### ความหมายของสีและสัญญาณ
@@ -191,8 +191,8 @@ void mySensorsRead(GaugeInput &in) {
 ```
 mode=sim | touch | serial | obd | custom
 theme=ice | lime | amber
-shift=6500        bright=80        beep=on|off
-peak=reset        help
+shift=6500        beep=on|off       peak=reset
+bench             help              (bright=80 เฉพาะเมื่อ BACKLIGHT_DIMMING 1)
 ```
 
 ---

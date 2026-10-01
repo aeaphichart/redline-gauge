@@ -78,3 +78,9 @@
 // ---- UI ------------------------------------------------------------------------
 #define UI_FPS               60     // partial redraws keep a frame well under 16 ms (see `bench`)
 #define STATUS_TITLE       "REDLINE"
+
+// ---- Backlight ---------------------------------------------------------------------------
+// Verified on the CYD: its backlight goes completely dark with ANY PWM duty below 100 %
+// (20 % and ~43 % both blank the screen). So by default the backlight is driven plain HIGH
+// and the BRIGHTNESS setting is hidden. Set 1 only on a board whose backlight really dims.
+#define BACKLIGHT_DIMMING 0

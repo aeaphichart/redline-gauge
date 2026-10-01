@@ -68,8 +68,21 @@ static void saveSettings() {   // Preferences only writes keys whose value chang
     prefs.putBool("beep", settings.beep);
 }
 
+static void backlightBegin() {
+#if BACKLIGHT_DIMMING
+    ledcAttach(TFT_BL, 5000, 8);                     // after tft.init() has driven TFT_BL HIGH
+#else
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);                      // full on: this board can't dim with PWM
+#endif
+}
+
 static void setBacklight(uint8_t pct) {
+#if BACKLIGHT_DIMMING
     ledcWrite(TFT_BL, (uint32_t)pct * 255 / 100);
+#else
+    (void)pct;
+#endif
 }
 
 // ---- serial commands --------------------------------------------------------------------------
@@ -122,7 +135,12 @@ static void handleLine(char *line) {
     } else if (keyIs(p, "shift", &v)) {
         s.shiftRpm = constrain(atoi(v), Settings::kShiftMin, Settings::kShiftMax);
     } else if (keyIs(p, "bright", &v)) {
+#if BACKLIGHT_DIMMING
         s.brightness = constrain(atoi(v), Settings::kBrightMin, 100);
+#else
+        Serial.println("[gauge] brightness is fixed: this board's backlight can't dim (BACKLIGHT_DIMMING 0)");
+        return;
+#endif
     } else if (keyIs(p, "beep", &v)) {
         s.beep = !strncasecmp(v, "on", 2) || *v == '1';
     } else if (!strncasecmp(p, "bench", 5)) {
@@ -386,7 +404,7 @@ void setup() {
     tft.init();
     tft.setRotation(1);
     tft.setSwapBytes(true);                          // canvas holds plain RGB565
-    ledcAttach(TFT_BL, 5000, 8);                     // backlight PWM (after init set it HIGH)
+    backlightBegin();
     setBacklight(settings.brightness);
     touch.setCal(526, 3443, 750, 3377, 320, 240, 1); // proven values for this board
 

@@ -107,11 +107,13 @@ static void compose(Canvas &cv, const Settings &s) {
     button(cv, t, R_SHIFT_V, buf, false);
     button(cv, t, R_SHIFT_UP, "+", false);
 
+#if BACKLIGHT_DIMMING                           // hidden: this CYD's backlight can't dim (config.h)
     cv.text(font_small, 172, 190, "BRIGHTNESS", C(C_MUTED), ALIGN_LEFT, 1);
     button(cv, t, R_BRI_DN, "-", false);
     snprintf(buf, sizeof buf, "%d%%", s.brightness);
     button(cv, t, R_BRI_V, buf, false);
     button(cv, t, R_BRI_UP, "+", false);
+#endif
 
     button(cv, t, R_BEEP, s.beep ? "BEEP  ON" : "BEEP  OFF", s.beep, font_small);
     button(cv, t, R_PEAK, "RESET PEAK", false, font_small);
@@ -142,8 +144,10 @@ Action tap(int x, int y, Settings &s) {
 
     if (inside(R_SHIFT_DN, x, y) && s.shiftRpm > Settings::kShiftMin) { s.shiftRpm -= Settings::kShiftStep; a = ACT_CHANGED; }
     if (inside(R_SHIFT_UP, x, y) && s.shiftRpm < Settings::kShiftMax) { s.shiftRpm += Settings::kShiftStep; a = ACT_CHANGED; }
+#if BACKLIGHT_DIMMING
     if (inside(R_BRI_DN, x, y) && s.brightness > Settings::kBrightMin) { s.brightness -= Settings::kBrightStep; a = ACT_CHANGED; }
     if (inside(R_BRI_UP, x, y) && s.brightness < 100) { s.brightness += Settings::kBrightStep; a = ACT_CHANGED; }
+#endif
     if (inside(R_BEEP, x, y)) { s.beep = !s.beep; a = ACT_CHANGED; }
     if (inside(R_PEAK, x, y)) return ACT_RESET_PEAK;
 

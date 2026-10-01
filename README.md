@@ -61,13 +61,13 @@ If the splash is removed or the logo is changed, the status bar shows `UNOFFICIA
 - **THEME**: ICE BLUE / ACID LIME / AMBER (tap a thumbnail to change the theme immediately)
 - **DATA SOURCE**: SIM · TOUCH · SERIAL · OBD BT · CUSTOM
 - **SHIFT LIGHT RPM**: ± 250 (3,000 – `RPM_MAX`)
-- **BRIGHTNESS**: 20–100% (backlight PWM)
+- **BRIGHTNESS**: hidden — the CYD's backlight goes dark with any PWM dimming, so it runs full-on. Boards that can dim: set `BACKLIGHT_DIMMING 1` in `config.h` to get a 20–100% control back
 - **BEEP ON/OFF**, **RESET PEAK**, **DONE** to go back
 
 Every value is saved in NVS and restored after a reboot.
 
 Serial commands (115200): `mode=sim|touch|serial|obd|custom` `theme=ice|lime|amber` `shift=6500`
-`bright=80` `beep=on|off` `peak=reset` `help`
+`beep=on|off` `peak=reset` `bench` (timing test) `help` — and `bright=80` when `BACKLIGHT_DIMMING` is 1
 
 ### Status bar
 Dot color: 🟢 live data · 🔵 simulator · 🟡 (blinking) connecting · 🔴 error.

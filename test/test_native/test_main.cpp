@@ -419,10 +419,17 @@ static void test_settings_limits() {
     TEST_ASSERT_EQUAL_UINT16(Settings::kShiftMax, s.shiftRpm);
     for (int i = 0; i < 40; i++) settings_ui::tap(21, 205, s);                   // SHIFT -
     TEST_ASSERT_EQUAL_UINT16(Settings::kShiftMin, s.shiftRpm);
+#if BACKLIGHT_DIMMING
     for (int i = 0; i < 10; i++) settings_ui::tap(181, 205, s);                  // BRIGHTNESS -
     TEST_ASSERT_EQUAL_UINT8(Settings::kBrightMin, s.brightness);
     for (int i = 0; i < 10; i++) settings_ui::tap(289, 205, s);                  // BRIGHTNESS +
     TEST_ASSERT_EQUAL_UINT8(100, s.brightness);
+#else
+    s.brightness = 100;                                                          // row hidden: taps ignored
+    TEST_ASSERT_EQUAL(settings_ui::ACT_NONE, settings_ui::tap(181, 205, s));
+    TEST_ASSERT_EQUAL(settings_ui::ACT_NONE, settings_ui::tap(289, 205, s));
+    TEST_ASSERT_EQUAL_UINT8(100, s.brightness);
+#endif
     bool beep = s.beep;
     settings_ui::tap(60, 229, s);                                                // BEEP toggle
     TEST_ASSERT_NOT_EQUAL(beep, s.beep);
