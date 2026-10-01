@@ -76,5 +76,5 @@
 #define PANEL3_LABEL  "INTAKE"
 
 // ---- UI ------------------------------------------------------------------------
-#define UI_FPS               30
+#define UI_FPS               60     // partial redraws keep a frame well under 16 ms (see `bench`)
 #define STATUS_TITLE       "REDLINE"

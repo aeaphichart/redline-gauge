@@ -290,7 +290,7 @@ static void test_renderer_only_pushes_changes() {
     settle(m, v, 3000, 80, 90, 14, 30);
     gauge_ui::invalidate();
     gauge_ui::render(v);
-    TEST_ASSERT_EQUAL_INT(8, gauge_ui::lastPushedRegions());   // 7 live regions + SETUP button
+    TEST_ASSERT_EQUAL_INT(9, gauge_ui::lastPushedRegions());   // 8 live regions + SETUP button
     gauge_ui::render(v);
     TEST_ASSERT_EQUAL_INT(0, gauge_ui::lastPushedRegions());   // nothing changed
     v.speed = 81;
@@ -344,6 +344,60 @@ static void test_splash_renders_every_theme() {
     }
 }
 
+// Partial pushes (only the changed bar columns / digit cells) must leave the screen
+// pixel-identical to repainting every region from scratch, frame after frame.
+#include <vector>
+static void test_partial_redraw_matches_full_redraw() {
+    gauge_ui::begin(push, kThemes[1]);
+    splash_ui::progress(push, kThemes[1], 1.0f);             // official title, as on the device
+    GaugeModel m;
+    GaugeView base;
+    bus::clear();
+    g_host_ms = 300000;
+    m.reset(g_host_ms);
+    settle(m, base, 900, 0, 88, 14, 35);
+    base.gear = 1;
+
+    std::vector<GaugeView> frames;
+    for (int i = 0; i < 160; i++) {
+        GaugeView v = base;
+        float ph = i / 160.0f, tri = ph < 0.5f ? ph * 2 : (1 - ph) * 2;
+        v.rpmBar = tri * RPM_MAX;
+        v.rpmText = (int)(v.rpmBar / RPM_DISPLAY_STEP) * RPM_DISPLAY_STEP;
+        v.peakMarker = (i > 85 && i < 130) ? RPM_MAX * 0.9f - (i - 85) * 30 : 0;   // falling peak marker
+        v.sessionPeak = i > 40 ? 7200 : 0;
+        v.shift = v.rpmBar >= RPM_SHIFT;
+        v.shiftFlash = (i / 3) & 1;
+        v.speed = (int)(tri * 199);
+        v.gear = 1 + i / 40;                                    // gear changes mid-sweep
+        if (i == 150) v.rpmValid = v.speedValid = false;        // "--" path
+        frames.push_back(v);
+    }
+    // pass 1: normal incremental rendering, snapshot the screen after every frame
+    std::vector<std::vector<uint16_t>> shots;
+    long incrementalPx = 0;
+    gauge_ui::redrawAll();                                  // clean screen (the splash left its bar in fb)
+    for (auto &v : frames) {
+        pushedPx = 0;
+        gauge_ui::render(v);
+        incrementalPx += pushedPx;
+        shots.emplace_back(fb, fb + 320 * 240);
+    }
+    // pass 2: every frame repainted from scratch; must match pass 1 exactly
+    for (size_t i = 0; i < frames.size(); i++) {
+        gauge_ui::redrawAll();
+        gauge_ui::render(frames[i]);
+        int diff = 0;
+        for (int p = 0; p < 320 * 240; p++) diff += fb[p] != shots[i][p];
+        char msg[48];
+        snprintf(msg, sizeof msg, "frame %d differs in %d px", (int)i, diff);
+        TEST_ASSERT_EQUAL_INT_MESSAGE(0, diff, msg);
+    }
+    // and the point of it all: far fewer pixels than repainting the moving regions
+    printf("partial redraw: %.0f px/frame on a full sweep\n", (double)incrementalPx / frames.size());
+    TEST_ASSERT_TRUE(incrementalPx / (long)frames.size() < 9000);
+}
+
 // ---- settings page -----------------------------------------------------------------------------------
 static void test_settings_taps() {
     gauge_ui::begin(push, kThemes[0]);
@@ -392,6 +446,7 @@ int main(int, char **) {
     RUN_TEST(test_model_marks_stale_values);
     RUN_TEST(test_simulator_stays_physical);
     RUN_TEST(test_renderer_only_pushes_changes);
+    RUN_TEST(test_partial_redraw_matches_full_redraw);
     RUN_TEST(test_theme_switch_repaints_whole_screen);
     RUN_TEST(test_splash_renders_every_theme);
     RUN_TEST(test_settings_taps);

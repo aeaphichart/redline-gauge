@@ -17,7 +17,7 @@ OBD-II Bluetooth, USB serial, or your own sensors.
 > 🇹🇭 คู่มือภาษาไทย (how each mode works, motorcycles/Honda Wave, wiring): **[README.th.md](README.th.md)**
 
 **Features**
-- Flicker-free partial redraw at ~30 fps, anti-aliased fonts blended onto the artwork
+- Flicker-free partial redraw at 60 fps, anti-aliased fonts blended onto the artwork
 - 3 themes (ICE BLUE, ACID LIME, AMBER), switchable on the device
 - Shift light (bar flash, RGB LED, beep), warn/critical colours, stale-data `--`, peak hold, gear estimate
 - Data sources: SIM, TOUCH (you're the throttle), SERIAL, OBD BT (ELM327), CUSTOM (your sensors)
@@ -183,9 +183,15 @@ tools/
 ```
 
 ### Rendering design
-- The background (150 KB) stays in flash. The screen is split into 7 regions (status, shift bar, RPM, speed, 3 panels).
-  A region is redrawn only when its content changes: compose background + text into a 28 KB buffer, then push once → no flicker.
-  On average only ~8% of the screen is pushed per frame (measured in the host preview).
+- The background (150 KB) stays in flash. The screen is split into regions (status, shift bar, RPM label, RPM number,
+  speed, 3 panels, SETUP). A region is redrawn only when its content changes: compose background + text into a 28 KB
+  buffer, then push once → no flicker.
+- Inside a region only what moved is pushed: the shift bar sends just the columns between the old and new lit edge,
+  and the RPM / speed numbers (tabular digits) send just the digit cells that changed. The whole region is still
+  painted and clipped, so the result is pixel-identical to a full repaint — a host test checks that on every frame
+  of a full sweep.
+- Measured on the CYD with `bench` (serial command, fixed 0 → 8000 → 0 sweep): **8.9 ms per frame, 113 fps possible**
+  (was 23.6 ms / 42 fps), 11.7 KB pushed per frame (was 44 KB). The UI runs capped at 60 fps (`UI_FPS`).
 - Fonts are anti-aliased and blended against the *actual background pixels*
   (TFT_eSPI smooth fonts blend against a single color, which leaves edge halos on an image background).
 - Shift-bar segments sit exactly on the 13 slots painted in the art, with partial fill at the leading edge

@@ -96,6 +96,8 @@ static bool keyIs(const char *p, const char *key, const char **val) {
     return true;
 }
 
+static void runBench();
+
 static void handleLine(char *line) {
     char *p = line;
     while (*p == ' ') p++;
@@ -123,6 +125,9 @@ static void handleLine(char *line) {
         s.brightness = constrain(atoi(v), Settings::kBrightMin, 100);
     } else if (keyIs(p, "beep", &v)) {
         s.beep = !strncasecmp(v, "on", 2) || *v == '1';
+    } else if (!strncasecmp(p, "bench", 5)) {
+        runBench();
+        return;
     } else if (!strncasecmp(p, "peak", 4)) {
         model.resetPeaks();
         Serial.println("[gauge] ok  peak reset");
@@ -315,8 +320,52 @@ static void handleTouch() {
 }
 
 // ---- display ------------------------------------------------------------------------------------
+static uint32_t g_pushUs = 0, g_pushPx = 0;   // bench counters
+
 static void pushToTft(int x, int y, int w, int h, const uint16_t *px) {
+    uint32_t t = micros();
     tft.pushImage(x, y, w, h, px);
+    g_pushUs += micros() - t;
+    g_pushPx += (uint32_t)w * h;
+}
+
+// `bench` over serial: render a fixed 0 -> 8000 -> 0 rpm sweep as fast as possible and
+// report where the time goes. Same workload every run, so tuning changes are comparable.
+static void runBench() {
+    GaugeSnapshot snap;
+    bus::snapshot(snap);
+    GaugeView v;
+    model.update(snap, millis(), "BENCH", v);
+    v.rpmValid = v.speedValid = v.coolValid = v.voltValid = v.iatValid = true;
+    v.gear = 3;
+    gauge_ui::invalidate();
+    gauge_ui::render(v);                               // full draw first, not measured
+    const int N = 300;
+    uint32_t worst = 0;
+    g_pushUs = g_pushPx = 0;
+    uint32_t t0 = micros();
+    for (int i = 0; i < N; i++) {
+        float ph = (float)i / N, tri = ph < 0.5f ? ph * 2 : (1 - ph) * 2;
+        v.rpmBar = tri * RPM_MAX;
+        v.rpmText = (int)(v.rpmBar / RPM_DISPLAY_STEP) * RPM_DISPLAY_STEP;
+        v.peakMarker = 0;
+        v.sessionPeak = RPM_MAX;
+        v.shift = v.rpmBar >= RPM_SHIFT;
+        v.shiftFlash = (i / 4) & 1;
+        v.speed = (int)(tri * 180);
+        v.coolant = 85 + (i / 30) % 5;
+        v.iat = 40 + (i / 40) % 3;
+        v.volt = 13.8f + ((i / 25) % 3) * 0.1f;
+        uint32_t f0 = micros();
+        gauge_ui::render(v);
+        uint32_t d = micros() - f0;
+        if (d > worst) worst = d;
+    }
+    uint32_t total = micros() - t0;
+    Serial.printf("[bench] %d frames: avg %.2f ms (max %.2f) = %.0f fps possible | push %.2f ms + compose %.2f ms"
+                  " per frame | %.1f KB/frame\n", N, total / 1000.0f / N, worst / 1000.0f, 1e6f * N / total,
+                  g_pushUs / 1000.0f / N, (total - g_pushUs) / 1000.0f / N, g_pushPx * 2 / 1024.0f / N);
+    gauge_ui::invalidate();                            // repaint the real values next frame
 }
 
 void setup() {

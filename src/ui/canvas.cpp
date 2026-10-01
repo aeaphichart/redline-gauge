@@ -57,10 +57,14 @@ void Canvas::blendRect(int x, int y, int rw, int rh, uint16_t c, uint8_t a) {
 
 void Canvas::hspan(float xa, float xb, int y, uint16_t c) {
     if (xb <= xa) return;
+    // cheap reject: off this canvas's rows or columns (common when composing a narrow strip)
+    if ((unsigned)(y - y0) >= (unsigned)h || xb < x0 || xa >= x0 + w) return;
     int ia = (int)floorf(xa), ib = (int)floorf(xb);
     if (ia == ib) { blendPixel(ia, y, c, (uint8_t)((xb - xa) * 255)); return; }
     blendPixel(ia, y, c, (uint8_t)((1.0f - (xa - ia)) * 255));
-    for (int x = ia + 1; x < ib; x++) pixel(x, y, c);
+    int lo = ia + 1 > x0 ? ia + 1 : x0, hi = ib < x0 + w ? ib : x0 + w;
+    uint16_t *row = px + (y - y0) * w - x0;
+    for (int x = lo; x < hi; x++) row[x] = c;            // solid middle: direct row writes
     float tail = xb - ib;
     if (tail > 0.004f) blendPixel(ib, y, c, (uint8_t)(tail * 255));
 }
@@ -140,6 +144,10 @@ int Canvas::text(const GaugeFont &f, int x, int y, const char *s, uint16_t c,
         if (tabular && isDigit(code)) { ox = (cell - g->adv) / 2; adv = cell; }
 
         int gx = x + ox + g->dx, gy = y - g->dy;
+        if (gx + g->w <= x0 || gx >= x0 + w || gy + g->h <= y0 || gy >= y0 + h) {
+            x += adv + tracking;                              // glyph entirely outside this canvas
+            continue;
+        }
         const uint8_t *bm = f.bitmap + g->offset;
         for (int r = 0; r < g->h; r++) {
             int sy = gy + r - y0;

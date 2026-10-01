@@ -31,14 +31,15 @@
 struct Rect { int x, y, w, h; };
 static const Rect R_STATUS = { 12,   7, 200, 15 };
 static const Rect R_BAR    = {  8,  27, 200, 22 };
-static const Rect R_RPM    = { 14,  62, 196, 66 };
+static const Rect R_RPM_LBL = { 14, 62, 196, 15 };  // "ENGINE SPEED" + PEAK
+static const Rect R_RPM     = { 14,  77, 196, 51 };  // big number + RPM unit
 static const Rect R_SPEED  = { 18, 183, 174, 28 };
 static const int  PANEL_TOP[3] = { 33, 102, 171 };
 static Rect panelRect(int i) { return { 226, PANEL_TOP[i] - 4, 88, 44 }; }
 
 static const Rect R_SETUP  = { 262, 221, 54, 17 };   // settings button, on the carbon strip
 
-enum { RG_STATUS, RG_BAR, RG_RPM, RG_SPEED, RG_P0, RG_P1, RG_P2, RG_SETUP, RG_COUNT };
+enum { RG_STATUS, RG_BAR, RG_RPM_LBL, RG_RPM, RG_SPEED, RG_P0, RG_P1, RG_P2, RG_SETUP, RG_COUNT };
 
 static uint16_t  s_buf[14000];                 // fits the largest region (RPM 196x66)
 static Canvas    cv(s_buf, sizeof(s_buf) / sizeof(s_buf[0]));
@@ -50,6 +51,8 @@ static int       s_pushed = 0;
 
 static inline uint16_t C(uint32_t rgb) { return rgb565(rgb); }
 
+static const char *s_regionKey(int rg);   // previous key of a region (before changed() updates it)
+
 // Returns true if the region must be redrawn (its key changed).
 static bool changed(int rg, const char *key) {
     if (strncmp(s_key[rg], key, sizeof(s_key[rg])) == 0) return false;
@@ -59,6 +62,21 @@ static bool changed(int rg, const char *key) {
 }
 
 static bool beginRegion(const Rect &r) { return cv.begin(r.x, r.y, r.w, r.h, s_bg); }
+
+// Compose only columns [x0, x1) of region r. Painters always draw the whole region in
+// screen coordinates and the canvas clips, so a partial push is pixel-identical to a
+// full one - it just moves fewer bytes over SPI (verified by a host test).
+static bool beginColumns(const Rect &r, int x0, int x1) {
+    if (x0 < r.x) x0 = r.x;
+    if (x1 > r.x + r.w) x1 = r.x + r.w;
+    if (x1 <= x0) return false;
+    return cv.begin(x0, r.y, x1 - x0, r.h, s_bg);
+}
+
+// Partial-update memory per region (reset by invalidate()).
+struct BarPrev { bool valid; float pos, peak; bool shift, lit; };
+static BarPrev s_barPrev = {};
+static char    s_rpmPrev[16] = "", s_speedPrev[8] = "";
 static void flush() {
     s_push(cv.x0, cv.y0, cv.w, cv.h, cv.px);
     s_pushed++;
@@ -108,15 +126,17 @@ static float rpmToPos(float rpm) {
     return p < 0 ? 0 : p > SLOT_COUNT ? SLOT_COUNT : p;
 }
 
-static void drawBar(const GaugeView &v) {
-    float pos  = v.rpmValid ? rpmToPos(v.rpmBar) : 0;
-    float peak = v.peakMarker > 0 ? rpmToPos(v.peakMarker) : 0;
-    bool lit   = !(v.shift && !v.shiftFlash);
-    char key[64];
-    // quantised to 1/4 px of a ~13 px slot -> ~50 steps per slot, invisible stepping
-    snprintf(key, sizeof key, "%d|%d|%d|%d", (int)(pos * 52), (int)(peak * 52), v.shift, lit);
-    if (!changed(RG_BAR, key) || !beginRegion(R_BAR)) return;
+// x of the lit edge for bar position p on slot row `row` (slots are slanted, so it differs per row)
+static float barEdgeX(float p, int row) {
+    if (p <= 0) return SLOT_SPAN[row][0][0];
+    int s = (int)p;
+    float f = p - s;
+    if (s >= SLOT_COUNT) { s = SLOT_COUNT - 1; f = 1; }
+    float a = SLOT_SPAN[row][s][0], b = SLOT_SPAN[row][s][1] + 1;
+    return a + f * (b - a);
+}
 
+static void paintBar(float pos, float peak, bool shift, bool lit) {
     for (int r = 0; r < SLOT_ROWS; r++) {
         int y = SLOT_Y0 + r;
         float t = (float)r / (SLOT_ROWS - 1);
@@ -128,7 +148,7 @@ static void drawBar(const GaugeView &v) {
                 if (f <= 0) break;
                 if (f > 1) f = 1;
                 float a = SLOT_SPAN[r][s][0], b = SLOT_SPAN[r][s][1] + 1;
-                uint16_t c = shade565(C(v.shift ? C_SEG_SHIFT : slotColor(s)), sh);
+                uint16_t c = shade565(C(shift ? C_SEG_SHIFT : slotColor(s)), sh);
                 cv.hspan(a, a + f * (b - a), y, c);
             }
         }
@@ -141,6 +161,41 @@ static void drawBar(const GaugeView &v) {
             cv.hspan(x - 0.5f, x + 1.5f, y, C(0xffffff));
         }
     }
+}
+
+static void drawBar(const GaugeView &v) {
+    float pos  = v.rpmValid ? rpmToPos(v.rpmBar) : 0;
+    float peak = v.peakMarker > 0 ? rpmToPos(v.peakMarker) : 0;
+    bool lit   = !(v.shift && !v.shiftFlash);
+    char key[64];
+    // quantised to 1/4 px of a ~13 px slot -> ~50 steps per slot, invisible stepping
+    snprintf(key, sizeof key, "%d|%d|%d|%d", (int)(pos * 52), (int)(peak * 52), v.shift, lit);
+    if (!changed(RG_BAR, key)) return;
+
+    // Only the columns between the old and new lit edge (and old / new peak marker) change.
+    // A shift-light flash or the first draw repaints the whole bar.
+    const BarPrev &o = s_barPrev;
+    int x0 = R_BAR.x, x1 = R_BAR.x + R_BAR.w;
+    if (o.valid && o.shift == v.shift && o.lit == lit) {
+        float lo = 1e9f, hi = -1e9f;
+        auto span = [&](float a, float b) { if (a < lo) lo = a; if (b > hi) hi = b; };
+        const int rows[2] = { 0, SLOT_ROWS - 1 };         // top row leans right, bottom left
+        if ((int)(pos * 52) != (int)(o.pos * 52))
+            for (int r : rows) {
+                float ea = barEdgeX(o.pos, r), eb = barEdgeX(pos, r);
+                span(fminf(ea, eb) - 1, fmaxf(ea, eb) + 2);
+            }
+        const float peaks[2] = { o.peak, peak };
+        for (float pk : peaks)
+            if (pk > 0 && (int)(o.peak * 52) != (int)(peak * 52))
+                for (int r : rows) { float x = barEdgeX(pk, r); span(x - 2, x + 3); }
+        if (hi < lo) { s_barPrev = { true, pos, peak, v.shift, lit }; return; }
+        x0 = (int)floorf(lo);
+        x1 = (int)ceilf(hi);
+    }
+    s_barPrev = { true, pos, peak, v.shift, lit };
+    if (!beginColumns(R_BAR, x0, x1)) return;
+    paintBar(pos, peak, v.shift, lit);
     flush();
 }
 
@@ -155,14 +210,38 @@ static void drawRpm(const GaugeView &v) {
         snprintf(peak, sizeof peak, "PEAK %s", p);
     }
     uint32_t color = !v.rpmValid ? C_DIM : v.shift ? C_CRIT : C_WHITE;
-    char key[64];
-    snprintf(key, sizeof key, "%s|%s|%06x", num, peak, (unsigned)color);
-    if (!changed(RG_RPM, key) || !beginRegion(R_RPM)) return;
 
-    cv.text(font_small, 19, 75, "ENGINE SPEED", C(C_LABEL), ALIGN_LEFT, 1);
-    if (peak[0]) cv.text(font_small, 206, 75, peak, C(0x6f808b), ALIGN_RIGHT);
-    int w = cv.text(font_rpm, 18, 118, num, C(color), ALIGN_LEFT, 0, true);
-    cv.text(font_small, 18 + w + 8, 118, "RPM", C(s_theme->accentBright), ALIGN_LEFT, 1);
+    // both rows are painted by the same code, clipped to their own region
+    auto paint = [&]() {
+        cv.text(font_small, 19, 75, "ENGINE SPEED", C(C_LABEL), ALIGN_LEFT, 1);
+        if (peak[0]) cv.text(font_small, 206, 75, peak, C(0x6f808b), ALIGN_RIGHT);
+        int w = cv.text(font_rpm, 18, 118, num, C(color), ALIGN_LEFT, 0, true);
+        cv.text(font_small, 18 + w + 8, 118, "RPM", C(s_theme->accentBright), ALIGN_LEFT, 1);
+    };
+    char key[64];
+    snprintf(key, sizeof key, "%s", peak);
+    if (changed(RG_RPM_LBL, key) && beginRegion(R_RPM_LBL)) { paint(); flush(); }
+
+    snprintf(key, sizeof key, "%s|%06x", num, (unsigned)color);
+    const char *prevSep = strchr(s_regionKey(RG_RPM), '|');
+    bool sameColor = prevSep && strcmp(prevSep, strchr(key, '|')) == 0;   // compare before changed() overwrites
+    if (!changed(RG_RPM, key)) return;
+    // Digits are tabular, so when the length and colour are unchanged only the cells from the
+    // first differing character onward need pushing (usually the last two or three digits).
+    int x0 = R_RPM.x, x1 = R_RPM.x + R_RPM.w;
+    size_t n = strlen(num);
+    if (s_rpmPrev[0] && sameColor && strlen(s_rpmPrev) == n) {
+        size_t i = 0;
+        while (i < n && s_rpmPrev[i] == num[i]) i++;
+        char prefix[16];
+        memcpy(prefix, num, i);
+        prefix[i] = 0;
+        x0 = 18 + (i ? cv.textWidth(font_rpm, prefix, 0, true) : 0) - 2;
+        x1 = 18 + cv.textWidth(font_rpm, num, 0, true) + 3;
+    }
+    snprintf(s_rpmPrev, sizeof s_rpmPrev, "%s", num);
+    if (!beginColumns(R_RPM, x0, x1)) return;
+    paint();
     flush();
 }
 
@@ -175,7 +254,21 @@ static void drawSpeed(const GaugeView &v) {
     else if (v.gear > 0) snprintf(gear, sizeof gear, "%d", v.gear);
     char key[64];
     snprintf(key, sizeof key, "%s|%s", num, gear);
-    if (!changed(RG_SPEED, key) || !beginRegion(R_SPEED)) return;
+    const char *prevGear = strchr(s_regionKey(RG_SPEED), '|');
+    bool sameGear = prevGear && strcmp(prevGear + 1, gear) == 0;
+    if (!changed(RG_SPEED, key)) return;
+    int x0 = R_SPEED.x, x1 = R_SPEED.x + R_SPEED.w;
+    if (s_speedPrev[0] && sameGear && v.speedValid) {        // only digits changed: push those cells
+        size_t i = 0;
+        while (num[i] && s_speedPrev[i] == num[i]) i++;
+        char prefix[8];
+        memcpy(prefix, num, i);
+        prefix[i] = 0;
+        x0 = 68 + (i ? cv.textWidth(font_speed, prefix, 0, true) : 0) - 2;
+        x1 = 68 + cv.textWidth(font_speed, num, 0, true) + 3;
+    }
+    snprintf(s_speedPrev, sizeof s_speedPrev, "%s", v.speedValid ? num : "");
+    if (!beginColumns(R_SPEED, x0, x1)) return;
 
     cv.text(font_label, 23, 203, "SPEED", C(s_theme->accentBright), ALIGN_LEFT, 1);
     int w = cv.text(font_speed, 68, 207, num, C(v.speedValid ? C_WHITE : C_DIM), ALIGN_LEFT, 0, true);
@@ -243,6 +336,8 @@ static void drawSetup() {
     flush();
 }
 
+static const char *s_regionKey(int rg) { return s_key[rg]; }
+
 // ---- public -------------------------------------------------------------------------------
 namespace gauge_ui {
 
@@ -269,7 +364,12 @@ void redrawAll() {
     invalidate();
 }
 
-void invalidate() { memset(s_key, 0, sizeof s_key); for (auto &k : s_key) k[0] = 1; }
+void invalidate() {
+    memset(s_key, 0, sizeof s_key);
+    for (auto &k : s_key) k[0] = 1;
+    s_barPrev.valid = false;                       // next frame: full repaint of every region
+    s_rpmPrev[0] = s_speedPrev[0] = 0;
+}
 
 void render(const GaugeView &v) {
     s_pushed = 0;
