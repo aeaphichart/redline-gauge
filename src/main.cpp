@@ -145,7 +145,7 @@ static void handleLine(char *line) {
     } else if (keyIs(p, "beep", &v)) {
         s.beep = !strncasecmp(v, "on", 2) || *v == '1';
     } else if (keyIs(p, "obdpin", &v)) {
-        char arg[16];
+        char arg[32];
         snprintf(arg, sizeof arg, "pin=%s", v);
         ObdSource::command(arg);
         return;

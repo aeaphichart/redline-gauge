@@ -25,6 +25,7 @@ so the CYD's USB port stays free for flashing and logs. 115200 baud, 8N1.
                                                  GND ─────────┴──────► GND
 ```
 
+- Leonardo / Pro Micro: the TX pin is `Serial1` (the sketches pick it automatically).
 - **Only TX → GPIO 27 and GND are needed.** The gauge never talks back.
 - On 5 V boards the 1k/2k divider brings 5 V down to 3.3 V. Don't skip it, or the ESP32 pin may be damaged.
 - Power: each board can have its own supply, but **GND must be shared**.
@@ -54,7 +55,7 @@ rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3
 - Send only what you have. A value not refreshed for **2.5 s** shows `--`.
 - 10–20 lines per second is plenty; the gauge smooths RPM between updates.
 - `mode=serial` switches the gauge to the SERIAL source. Both sketches send it once at start-up.
-  Other commands work as well: `theme=lime`, `shift=6500`, `bright=80`, `peak=reset`.
+  Other commands work as well: `theme=lime`, `shift=6500`, `peak=reset`.
 
 ---
 

@@ -191,6 +191,46 @@ static void settle(GaugeModel &m, GaugeView &v, float rpm, float spd, float clt,
     }
 }
 
+static void test_obd_adapter_selection() {
+    TEST_ASSERT_TRUE(obdValidMac("AA:BB:CC:DD:EE:FF"));
+    TEST_ASSERT_TRUE(obdValidMac("00:1d:a5:68:98:8b"));
+    TEST_ASSERT_FALSE(obdValidMac("AA:BB:CC:DD:EE"));
+    TEST_ASSERT_FALSE(obdValidMac("AA-BB-CC-DD-EE-FF"));
+    TEST_ASSERT_FALSE(obdValidMac("GG:BB:CC:DD:EE:FF"));
+    TEST_ASSERT_FALSE(obdValidMac(""));
+    TEST_ASSERT_FALSE(obdValidMac(nullptr));
+    // real ELM327 clone names
+    const char *yes[] = {"OBDII", "OBD2", "obdII", "OBD-II", "V-LINK", "Android-Vlink", "VEEPEAK",
+                         "KONNWEI", "Vgate iCar2", "OBDLink MX+", "ELM327 v1.5", "CARISTA", "KIWI 3"};
+    for (const char *n : yes) TEST_ASSERT_TRUE_MESSAGE(obdNameLooksLikeAdapter(n, "OBDII"), n);
+    // things that are nearby in a car or on a bike
+    const char *no[] = {"", "HELMET-INTERCOM", "Cardo PACKTALK", "JBL Flip 5", "Galaxy S24",
+                        "iPhone", "Toyota Touch", "SCANNER", "REDLINE"};
+    for (const char *n : no) TEST_ASSERT_FALSE_MESSAGE(obdNameLooksLikeAdapter(n, "OBDII"), n);
+    TEST_ASSERT_FALSE(obdNameLooksLikeAdapter(nullptr, "OBDII"));
+    // a custom OBD_BT_NAME matches exactly, case-insensitive
+    TEST_ASSERT_TRUE(obdNameLooksLikeAdapter("MyDongle", "mydongle"));
+    TEST_ASSERT_FALSE(obdNameLooksLikeAdapter("MyDongle2", "mydongle"));
+}
+
+static void test_obd_supported_pid_mask() {
+    // Typical CAN car: 0100 -> BE 3E B8 11 (has 05, 0C, 0D, 0F)
+    uint32_t m = obdSupportedPids("4100BE3EB811");
+    TEST_ASSERT_EQUAL_HEX32(0xBE3EB811, m);
+    TEST_ASSERT_TRUE(obdPidSupported(m, 0x05));
+    TEST_ASSERT_TRUE(obdPidSupported(m, 0x0C));
+    TEST_ASSERT_TRUE(obdPidSupported(m, 0x0D));
+    TEST_ASSERT_TRUE(obdPidSupported(m, 0x0F));
+    TEST_ASSERT_FALSE(obdPidSupported(m, 0x02));
+    TEST_ASSERT_FALSE(obdPidSupported(m, 0x00));
+    TEST_ASSERT_FALSE(obdPidSupported(m, 0x21));
+    // two ECUs answer, after the protocol search banner: masks are combined
+    TEST_ASSERT_EQUAL_HEX32(0x98180001u | 0x00080000u,
+                            obdSupportedPids("SEARCHING...4100981800014100000800 00"));
+    TEST_ASSERT_EQUAL_HEX32(0, obdSupportedPids("NODATA"));
+    TEST_ASSERT_EQUAL_HEX32(0, obdSupportedPids("4100BE3E"));   // truncated
+}
+
 static void test_gear_estimate() {
     static const float ratios[] = GEAR_RATIOS;
     for (int g = 0; g < GEAR_COUNT; g++) {
@@ -448,6 +488,8 @@ int main(int, char **) {
     RUN_TEST(test_serial_json_and_aliases);
     RUN_TEST(test_serial_ignores_garbage);
     RUN_TEST(test_obd_parse);
+    RUN_TEST(test_obd_adapter_selection);
+    RUN_TEST(test_obd_supported_pid_mask);
     RUN_TEST(test_gear_estimate);
     RUN_TEST(test_model_levels_and_shift);
     RUN_TEST(test_model_marks_stale_values);

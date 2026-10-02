@@ -1,5 +1,6 @@
 #include "data/custom_source.h"
 #include "gauge_input.h"
+#include "config.h"
 
 void CustomSource::begin() {
     if (!began_) { mySensorsBegin(); began_ = true; }   // pins/interrupts set up once
@@ -21,6 +22,12 @@ void CustomSource::poll() {
     for (int i = 0; i < 7; i++)
         if (!isnan(vals[i])) { bus::publish(chs[i], vals[i]); n++; }
 
+    if (!n) {   // values pushed with gauge::set() from elsewhere (CAN callback, own task) count too
+        GaugeSnapshot snap;
+        bus::snapshot(snap);
+        for (int c = 0; c < CH_COUNT && !n; c++)
+            if (snap.stamp[c] && now - snap.stamp[c] < DATA_STALE_MS) n++;
+    }
     int8_t live = n > 0;
     if (live != live_) {
         live_ = live;

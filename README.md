@@ -174,7 +174,7 @@ battery divider on GPIO 35, oil-temp NTC on `in.coolant` with `PANEL1_LABEL "OIL
 ## Tests
 
 ```bash
-~/.platformio/penv/bin/pio test -e native    # 18 host tests: parsers, model, renderer, settings, simulator, theme assets
+~/.platformio/penv/bin/pio test -e native    # 23 host tests: parsers, model, renderer, settings, simulator, theme assets
 ```
 CI (GitHub Actions) runs the tests and builds both firmware variants on every push.
 

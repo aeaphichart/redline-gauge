@@ -47,7 +47,7 @@
 // BLE-only adapters (Vgate iCar Pro BLE, some Veepeak) are NOT supported by this path.
 #define OBD_BT_NAME        "OBDII"  // preferred name; any "OBD/ELM/V-LINK/…" device found by the scan also works
 #define OBD_BT_MAC         ""       // optional fixed MAC (or type obd=AA:BB:… on serial; the found one is saved)
-#define OBD_BT_PIN         "1234"   // tried first, then 0000 / 6789 / 1111 (obdpin=… fixes it)
+#define OBD_BT_PIN         "1234"   // tried first, then 1234 / 0000 / 6789 / 1111 (obdpin=… fixes one)
 #define OBD_CMD_TIMEOUT_MS 1500
 
 // ---- Serial input (USB) ------------------------------------------------------

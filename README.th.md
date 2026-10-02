@@ -266,7 +266,7 @@ tools/
 
 ### ทดสอบ
 ```bash
-~/.platformio/penv/bin/pio test -e native     # เทส 18 ชุดบน Mac: parser, model, การวาดจอ, หน้าตั้งค่า, ตัวจำลอง, ภาพธีม
+~/.platformio/penv/bin/pio test -e native     # เทส 23 ชุดบน Mac: parser, model, การวาดจอ, หน้าตั้งค่า, ตัวจำลอง, ภาพธีม
 ```
 ทุกครั้งที่ push, GitHub Actions จะรันเทสและ build เฟิร์มแวร์ทั้ง 2 แบบให้อัตโนมัติ
 

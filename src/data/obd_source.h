@@ -31,13 +31,16 @@ private:
     uint8_t  noData_[5] = {};        // per-PID "NO DATA" counter, >=3 = unsupported
     char     resp_[96];
     char     mac_[18] = {};          // adapter to connect to ("" = scan)
-    char     pin_[8] = {};           // fixed PIN ("" = cycle the common ones)
+    char     pin_[17] = {};           // fixed PIN ("" = cycle the common ones)
     uint8_t  pinIdx_ = 0;
     uint8_t  macFails_ = 0;
+    uint8_t  nodataRun_ = 0;         // consecutive NO DATA replies
+    uint32_t pidMask_ = 0;           // PIDs 01-20 the ECU reports (0100), 0 = unknown
 
     void retryIn(uint32_t ms, State then, const char *msg);
     bool elm(const char *cmd, uint32_t timeoutMs);
     void loadTarget();
     bool scan(char *macOut);
+    bool usable(int idx) const;
     bool readPid(int idx);
 };

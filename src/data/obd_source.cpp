@@ -15,30 +15,22 @@ static BluetoothSerial SerialBT;
 // remember its MAC (NVS) so the next boot connects straight away.
 // Serial:  obd=scan  forget the saved adapter and scan again
 //          obd=AA:BB:CC:DD:EE:FF  use this adapter      obdpin=0000  fixed PIN
-static const char *const kNameHints[] = {
-    "OBD", "ELM", "V-LINK", "VLINK", "VEEPEAK", "KONNWEI", "VGATE", "ICAR", "CARISTA", "SCAN",
-};
-// Clones use one of these legacy PINs; without a saved/configured match we cycle them.
-static const char *const kPins[] = { OBD_BT_PIN, "1234", "0000", "6789", "1111" };
+// Clones use one of these legacy PINs; without a fixed one (obdpin=) we cycle through
+// OBD_BT_PIN first, then the common ones.
+static const char *const kCommonPins[] = { "1234", "0000", "6789", "1111" };
+static const char *kPins[5];
+static int kPinCount = 0;
+static void buildPinList() {
+    kPinCount = 0;
+    kPins[kPinCount++] = OBD_BT_PIN;
+    for (const char *p : kCommonPins) if (strcmp(p, OBD_BT_PIN)) kPins[kPinCount++] = p;
+}
 static volatile bool s_retarget = false;    // set by serial commands (core 1)
+static volatile uint32_t s_passkey = 1234;  // SSP passkey answer = the PIN being tried
 
-static bool validMac(const char *m) {
-    if (strlen(m) != 17) return false;
-    for (int i = 0; i < 17; i++)
-        if (i % 3 == 2 ? m[i] != ':' : !isxdigit((unsigned char)m[i])) return false;
-    return true;
-}
+static bool validMac(const char *m) { return obdValidMac(m); }
 
-static bool looksLikeObd(const std::string &name) {
-    if (name.empty()) return false;
-    String up = String(name.c_str());
-    up.toUpperCase();
-    String want = OBD_BT_NAME;
-    want.toUpperCase();
-    if (want.length() && up == want) return true;
-    for (const char *h : kNameHints) if (up.indexOf(h) >= 0) return true;
-    return false;
-}
+static int startPinIdx() { return 0; }   // kPins[0] is OBD_BT_PIN
 
 bool ObdSource::command(const char *line) {
     Preferences p;
@@ -53,6 +45,7 @@ bool ObdSource::command(const char *line) {
     } else if (!strncasecmp(line, "pin=", 4) || !strncasecmp(line, "pin:", 4)) {
         String pin = String(line + 4);
         pin.trim();
+        if (pin.length() > 16) { p.end(); Serial.println("[obd] PIN is 1-16 characters"); return true; }
         if (pin.length()) p.putString("pin", pin); else p.remove("pin");
         Serial.printf("[obd] PIN %s\n", pin.length() ? pin.c_str() : "auto (1234/0000/6789/1111)");
     } else {
@@ -67,8 +60,8 @@ void ObdSource::loadTarget() {
     Preferences p;
     mac_[0] = pin_[0] = 0;
     if (p.begin("obd", true)) {
-        p.getString("mac", mac_, sizeof mac_);
-        p.getString("pin", pin_, sizeof pin_);
+        if (p.isKey("mac")) p.getString("mac", mac_, sizeof mac_);
+        if (p.isKey("pin")) p.getString("pin", pin_, sizeof pin_);
         p.end();
     }
     if (!validMac(mac_) && validMac(OBD_BT_MAC)) strlcpy(mac_, OBD_BT_MAC, sizeof mac_);
@@ -83,30 +76,51 @@ static void saveMac(const char *mac) {
 }
 
 // Scan ~10 s, log every device, return the best OBD-looking one (strongest signal).
+// Older ELM327 clones (Bluetooth 2.0) don't put their name in the inquiry reply, so
+// unnamed devices get an explicit remote-name request before we judge them.
 bool ObdSource::scan(char *macOut) {
     bus::setLink(Link::Connecting, "BT SCAN");
     Serial.println("[obd] scanning for Bluetooth Classic devices (10 s)...");
     BTScanResults *r = SerialBT.discover(10240);
     if (!r) { Serial.println("[obd] scan failed"); return false; }
-    int best = -1, bestRssi = -1000, n = r->getCount();
+    int n = r->getCount();
+    if (n > 16) n = 16;
+    char names[16][32];
+    int rssis[16];
+    BTAddress addrs[16];
+    int unnamedAsked = 0;
     for (int i = 0; i < n; i++) {
         BTAdvertisedDevice *d = r->getDevice(i);
-        std::string name = d->haveName() ? d->getName() : std::string();
-        bool obd = looksLikeObd(name);
-        int rssi = d->haveRSSI() ? d->getRSSI() : -999;
-        Serial.printf("[obd]   %s  %-20s rssi=%d%s\n", d->getAddress().toString().c_str(),
-                      name.empty() ? "(no name)" : name.c_str(), rssi, obd ? "  <- OBD" : "");
-        if (obd && rssi > bestRssi) { best = i; bestRssi = rssi; }
+        addrs[i] = d->getAddress();
+        rssis[i] = d->haveRSSI() ? d->getRSSI() : -999;
+        names[i][0] = 0;
+        if (d->haveName()) strlcpy(names[i], d->getName().c_str(), sizeof names[i]);
     }
+    for (int i = 0; i < n; i++) {
+        if (names[i][0] || unnamedAsked >= 6) continue;      // cap: each try can take ~3 s
+        unnamedAsked++;
+        char rn[ESP_BT_GAP_MAX_BDNAME_LEN + 1];
+        SerialBT.invalidateRemoteName();
+        SerialBT.requestRemoteName((uint8_t *)addrs[i].getNative());
+        for (uint32_t t0 = millis(); millis() - t0 < 3000; delay(50)) {
+            if (SerialBT.readRemoteName(rn)) { strlcpy(names[i], rn, sizeof names[i]); break; }
+        }
+    }
+    int best = -1, bestRssi = -1000;
+    for (int i = 0; i < n; i++) {
+        bool obd = obdNameLooksLikeAdapter(names[i], OBD_BT_NAME);
+        Serial.printf("[obd]   %s  %-20s rssi=%d%s\n", addrs[i].toString(true).c_str(),
+                      names[i][0] ? names[i] : "(no name)", rssis[i], obd ? "  <- OBD" : "");
+        if (obd && rssis[i] > bestRssi) { best = i; bestRssi = rssis[i]; }
+    }
+    SerialBT.discoverClear();
     if (best < 0) {
         Serial.printf("[obd] %d device(s), none named like an OBD adapter.\n"
                       "[obd] Pick yours from the list and type  obd=AA:BB:CC:DD:EE:FF\n"
-                      "[obd] Nothing at all? The adapter may be BLE-only, or a phone is still connected to it.\n", n);
-        SerialBT.discoverClear();
+                      "[obd] Nothing at all? The adapter may be BLE-only, unpowered, or a phone is still connected to it.\n", n);
         return false;
     }
-    strlcpy(macOut, r->getDevice(best)->getAddress().toString().c_str(), 18);
-    SerialBT.discoverClear();
+    strlcpy(macOut, addrs[best].toString(true).c_str(), 18);
     return true;
 }
 
@@ -136,8 +150,11 @@ void ObdSource::retryIn(uint32_t ms, State then, const char *msg) {
 void ObdSource::begin() {
     state_ = S_BT_START;
     slot_ = 0;
-    pinIdx_ = 0;
+    buildPinList();
+    pinIdx_ = startPinIdx();
     macFails_ = 0;
+    nodataRun_ = 0;
+    pidMask_ = 0;
     s_retarget = false;
     loadTarget();
     errors_ = 0;
@@ -184,17 +201,27 @@ bool ObdSource::readPid(int idx) {
         return true;
     }
     switch (obdParsePid(resp_, d.pid, v)) {
-        case OBD_OK:     noData_[idx] = 0; bus::publish(d.ch, v); return true;
-        case OBD_NODATA: if (noData_[idx] < 255) noData_[idx]++; return true;
+        case OBD_OK:     noData_[idx] = 0; nodataRun_ = 0; bus::publish(d.ch, v); return true;
+        case OBD_NODATA: if (noData_[idx] < 255) noData_[idx]++;
+                         if (nodataRun_ < 255) nodataRun_++;
+                         return true;
         default:         return false;
     }
+}
+
+// Without a 0100 bitmask (some ECUs answer it oddly) fall back to the NO DATA counter.
+bool ObdSource::usable(int idx) const {
+    uint8_t pid = kPids[idx].pid;
+    if (pid == 0) return true;                             // ATRV is the adapter itself
+    if (pidMask_) return obdPidSupported(pidMask_, pid);
+    return noData_[idx] < 3;
 }
 
 void ObdSource::poll() {
     if (s_retarget) {                       // obd=… typed: drop the link, reconnect to the new target
         s_retarget = false;
         loadTarget();
-        pinIdx_ = 0;
+        pinIdx_ = startPinIdx();
         macFails_ = 0;
         if (btStarted_) {
             if (SerialBT.connected()) SerialBT.disconnect();
@@ -209,6 +236,10 @@ void ObdSource::poll() {
 
     case S_BT_START:
         // master mode; BLE disabled to leave RAM for the display
+        // Newer adapters use Secure Simple Pairing: accept "just works"/numeric comparison
+        // (we chose this device ourselves) and answer a passkey request with the PIN.
+        SerialBT.onConfirmRequest([](uint32_t) { SerialBT.confirmReply(true); });
+        SerialBT.onKeyRequest([]() { SerialBT.respondPasskey(s_passkey); });
         if (!SerialBT.begin("REDLINE", true, true)) { retryIn(3000, S_BT_START, "BT FAIL"); break; }
         SerialBT.setPin(OBD_BT_PIN, strlen(OBD_BT_PIN));
         btStarted_ = true;
@@ -216,31 +247,37 @@ void ObdSource::poll() {
         break;
 
     case S_CONNECT: {
-        // A saved/configured MAC is tried first; after 3 misses (adapter swapped?) scan again.
+        // The saved/configured (or just scanned) MAC is retried until every PIN has failed
+        // on it, then we scan again (adapter swapped, or it was the wrong device).
         char target[18];
-        bool fromScan = false;
-        if (mac_[0] && macFails_ < 3) {
+        int maxFails = pin_[0] ? 3 : kPinCount;
+        if (mac_[0] && macFails_ < maxFails) {
             strlcpy(target, mac_, sizeof target);
         } else if (scan(target)) {
-            fromScan = true;
+            strlcpy(mac_, target, sizeof mac_);     // RAM only; saved to NVS once it connects
+            macFails_ = 0;
         } else {
+            // nothing found: try the saved adapter again next round. Its name may simply not
+            // match (set by obd=<MAC>), or it was unpowered while the car was off.
+            macFails_ = 0;
             retryIn(3000, S_CONNECT, "NO ADAPTER");
             break;
         }
         const char *pin = pin_[0] ? pin_ : kPins[pinIdx_];
         SerialBT.setPin(pin, strlen(pin));
+        s_passkey = strtoul(pin, nullptr, 10);
         bus::setLink(Link::Connecting, "BT PAIRING");
         Serial.printf("[obd] connecting to %s (PIN %s)\n", target, pin);
         bool ok = SerialBT.connect(BTAddress(target)) && SerialBT.connected(5000);
         if (!ok) {
             Serial.println("[obd] connect failed");
-            if (!pin_[0]) pinIdx_ = (pinIdx_ + 1) % (sizeof kPins / sizeof kPins[0]);
-            if (!fromScan && macFails_ < 255) macFails_++;
+            if (!pin_[0]) pinIdx_ = (pinIdx_ + 1) % kPinCount;
+            if (macFails_ < 255) macFails_++;
             retryIn(2000, S_CONNECT, "NO ADAPTER");
             break;
         }
         Serial.printf("[obd] bluetooth connected to %s\n", target);
-        if (strcmp(mac_, target)) { strlcpy(mac_, target, sizeof mac_); saveMac(target); }
+        saveMac(target);                             // writes only if it changed
         macFails_ = 0;
         state_ = S_INIT;
         break;
@@ -269,7 +306,12 @@ void ObdSource::poll() {
         // First real request makes the ELM auto-detect the protocol ("SEARCHING...").
         bus::setLink(Link::Connecting, "ECU SEARCH");
         if (elm("0100", 10000) && strstr(resp_, "4100")) {
-            Serial.println("[obd] ECU found, streaming");
+            // The 0100 reply says which PIDs 01-20 this ECU has; poll only those. Per-PID
+            // "NO DATA" counts start fresh, so a sleepy ECU doesn't disable a PID for good.
+            pidMask_ = obdSupportedPids(resp_);
+            memset(noData_, 0, sizeof noData_);
+            nodataRun_ = 0;
+            Serial.printf("[obd] ECU found (PIDs 01-20: %08lX), streaming\n", (unsigned long)pidMask_);
             bus::setLink(Link::Live, "");
             errors_ = 0;
             state_ = S_RUN;
@@ -286,11 +328,14 @@ void ObdSource::poll() {
         for (int tries = 0; tries < (int)sizeof(kSchedule); tries++) {
             idx = kSchedule[slot_];
             slot_ = (slot_ + 1) % sizeof(kSchedule);
-            if (noData_[idx] < 3) break;                   // skip PIDs this car doesn't support
+            if (usable(idx)) break;                        // skip PIDs this car doesn't support
         }
-        if (readPid(idx)) {
+        if (readPid(idx) && nodataRun_ < 12) {
             errors_ = 0;
             bus::setLink(Link::Live, "");
+        } else if (nodataRun_ >= 12) {                     // ECU answers nothing but NO DATA
+            Serial.println("[obd] only NO DATA replies, searching for the ECU again");
+            retryIn(2000, S_SEARCH, "NO ECU");
         } else if (++errors_ >= 6) {
             Serial.printf("[obd] lost ECU, last reply '%s'\n", resp_);
             if (!SerialBT.connected()) retryIn(1000, S_CONNECT, "BT LOST");

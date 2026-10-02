@@ -21,7 +21,13 @@
   Copyright (c) 2026 moomdate — PolyForm Noncommercial 1.0.0
 */
 
-#define GAUGE Serial            // serial port wired to the gauge (Uno/Nano: D1 / TX)
+// Boards whose "Serial" is native USB (Leonardo, Pro Micro, Micro, ESP32-S3/C3 with
+// USB CDC on boot) have the TX pin on Serial1 instead.
+#if defined(USBCON) || (defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT)
+#define GAUGE Serial1
+#else
+#define GAUGE Serial            // Uno/Nano/Mega/ESP32: pin D1 / TX0
+#endif
 
 // ---- what is connected (1 = on) ------------------------------------------------
 #define USE_RPM       1

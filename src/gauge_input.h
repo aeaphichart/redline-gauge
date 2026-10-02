@@ -46,7 +46,9 @@ inline float readDividerVolts(int pin, float r1, float r2) {
 // r25 = resistance at 25 °C, beta from the datasheet (≈3950 for many senders).
 inline float readNtcCelsius(int pin, float rSeries, float r25, float beta) {
     float v = analogReadMilliVolts(pin) / 1000.0f;
-    if (v <= 0.01f || v >= 3.29f) return NAN;               // open / short: no reading
+    // The ADC tops out near 3.1 V, so an unplugged sender (pin pulled to 3.3 V) reads ~3.1 V:
+    // treat >= 3.05 V as open. That still covers ~-20 degC with a 2.2k pull-up / 2.5k NTC.
+    if (v <= 0.01f || v >= 3.05f) return NAN;               // open / short: no reading
     float r = rSeries * v / (3.3f - v);
     return 1.0f / (logf(r / r25) / beta + 1.0f / 298.15f) - 273.15f;
 }

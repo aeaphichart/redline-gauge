@@ -21,8 +21,14 @@
 
 // Which serial port is wired to the gauge. On an Uno/Nano this is "Serial"
 // (pin D1 / TX), which is also what the USB Serial Monitor shows, so you
-// can watch exactly what's being sent. Leonardo / Mega / ESP32: Serial1 works too.
-#define GAUGE Serial
+// can watch exactly what's being sent. Mega / ESP32: Serial1 works too.
+// Boards whose "Serial" is native USB (Leonardo, Pro Micro, Micro, ESP32-S3/C3 with
+// USB CDC on boot) have the TX pin on Serial1 instead.
+#if defined(USBCON) || (defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT)
+#define GAUGE Serial1
+#else
+#define GAUGE Serial            // Uno/Nano/Mega/ESP32: pin D1 / TX0
+#endif
 
 const unsigned long SEND_EVERY_MS = 50;   // 20 updates per second
 
