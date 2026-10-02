@@ -26,6 +26,7 @@ static void buildPinList() {
     for (const char *p : kCommonPins) if (strcmp(p, OBD_BT_PIN)) kPins[kPinCount++] = p;
 }
 static volatile bool s_retarget = false;    // set by serial commands (core 1)
+static volatile bool s_forgetBond = false;  // obd=scan: also drop the pairing key
 static volatile uint32_t s_passkey = 1234;  // SSP passkey answer = the PIN being tried
 
 static bool validMac(const char *m) { return obdValidMac(m); }
@@ -38,6 +39,7 @@ bool ObdSource::command(const char *line) {
     bool ok = true;
     if (!strncasecmp(line, "scan", 4) || !strncasecmp(line, "forget", 6)) {
         p.remove("mac");
+        s_forgetBond = true;
         Serial.println("[obd] saved adapter forgotten, scanning on next attempt");
     } else if (validMac(line) || (strlen(line) > 17 && validMac(String(line).substring(0, 17).c_str()))) {
         p.putString("mac", String(line).substring(0, 17));
@@ -97,14 +99,19 @@ bool ObdSource::scan(char *macOut) {
         if (d->haveName()) strlcpy(names[i], d->getName().c_str(), sizeof names[i]);
     }
     for (int i = 0; i < n; i++) {
-        if (names[i][0] || unnamedAsked >= 6) continue;      // cap: each try can take ~3 s
+        if (names[i][0] || unnamedAsked >= 6) continue;      // cap: each try can take ~6 s
         unnamedAsked++;
+        bool got = false;
         char rn[ESP_BT_GAP_MAX_BDNAME_LEN + 1];
         SerialBT.invalidateRemoteName();
         SerialBT.requestRemoteName((uint8_t *)addrs[i].getNative());
-        for (uint32_t t0 = millis(); millis() - t0 < 3000; delay(50)) {
-            if (SerialBT.readRemoteName(rn)) { strlcpy(names[i], rn, sizeof names[i]); break; }
+        // The reply carries no address, and the stack refuses a new request while one is
+        // pending (page timeout ~5 s): wait long enough, and stop asking after a timeout so
+        // a late answer can't be pinned on the next device.
+        for (uint32_t t0 = millis(); millis() - t0 < 6000; delay(50)) {
+            if (SerialBT.readRemoteName(rn)) { strlcpy(names[i], rn, sizeof names[i]); got = true; break; }
         }
+        if (!got) { SerialBT.invalidateRemoteName(); break; }
     }
     int best = -1, bestRssi = -1000;
     for (int i = 0; i < n; i++) {
@@ -209,6 +216,14 @@ bool ObdSource::readPid(int idx) {
     }
 }
 
+// A stale link key (adapter re-paired with a phone, or it forgot ours) makes every
+// connect fail no matter which PIN; dropping the bond forces a fresh pairing.
+void ObdSource::forgetBond(const char *mac) {
+    BTAddress a{String(mac)};
+    if (SerialBT.deleteBondedDevice((uint8_t *)a.getNative()))
+        Serial.printf("[obd] pairing with %s removed\n", mac);
+}
+
 // Without a 0100 bitmask (some ECUs answer it oddly) fall back to the NO DATA counter.
 bool ObdSource::usable(int idx) const {
     uint8_t pid = kPids[idx].pid;
@@ -220,6 +235,8 @@ bool ObdSource::usable(int idx) const {
 void ObdSource::poll() {
     if (s_retarget) {                       // obd=… typed: drop the link, reconnect to the new target
         s_retarget = false;
+        if (s_forgetBond && btStarted_ && mac_[0]) forgetBond(mac_);
+        s_forgetBond = false;
         loadTarget();
         pinIdx_ = startPinIdx();
         macFails_ = 0;
@@ -273,6 +290,7 @@ void ObdSource::poll() {
             Serial.println("[obd] connect failed");
             if (!pin_[0]) pinIdx_ = (pinIdx_ + 1) % kPinCount;
             if (macFails_ < 255) macFails_++;
+            if (macFails_ == maxFails) forgetBond(target);   // every PIN failed: re-pair from scratch
             retryIn(2000, S_CONNECT, "NO ADAPTER");
             break;
         }
@@ -285,7 +303,12 @@ void ObdSource::poll() {
 
     case S_INIT: {
         bus::setLink(Link::Connecting, "ELM INIT");
-        elm("ATZ", 2500);                               // reset; reply is the version banner
+        // reset; reply is the version banner. Slow clones may answer after the timeout, so
+        // swallow anything late before ATE0, or its '>' would end the ATE0 read early.
+        if (!elm("ATZ", 5000)) {
+            for (uint32_t t0 = millis(); millis() - t0 < 500; delay(10))
+                while (SerialBT.available()) SerialBT.read();
+        }
         Serial.printf("[obd] ATZ -> %s\n", resp_);
         // Cheap "v2.1" mini clones don't implement every AT command and answer "?" to some.
         // Only echo-off must work; the rest are best effort (the parser copes without them:

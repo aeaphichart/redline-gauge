@@ -42,5 +42,6 @@ private:
     void loadTarget();
     bool scan(char *macOut);
     bool usable(int idx) const;
+    void forgetBond(const char *mac);
     bool readPid(int idx);
 };
