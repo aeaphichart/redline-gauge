@@ -287,16 +287,19 @@ void ObdSource::poll() {
         bus::setLink(Link::Connecting, "ELM INIT");
         elm("ATZ", 2500);                               // reset; reply is the version banner
         Serial.printf("[obd] ATZ -> %s\n", resp_);
-        static const char *const init[] = {"ATE0", "ATL0", "ATS0", "ATH0", "ATAT1", "ATSP0"};
-        bool ok = true;
-        for (const char *c : init) {
-            if (!elm(c, OBD_CMD_TIMEOUT_MS) || !strstr(resp_, "OK")) { ok = false; break; }
-        }
-        if (!ok) {
-            Serial.printf("[obd] init failed, last reply '%s'\n", resp_);
+        // Cheap "v2.1" mini clones don't implement every AT command and answer "?" to some.
+        // Only echo-off must work; the rest are best effort (the parser copes without them:
+        // spaces are stripped, and headers/linefeeds don't hide the "41xx" reply).
+        if (!elm("ATE0", OBD_CMD_TIMEOUT_MS) || !strstr(resp_, "OK")) {
+            Serial.printf("[obd] init failed, ATE0 -> '%s'\n", resp_);
             if (!SerialBT.connected()) { retryIn(2000, S_CONNECT, "BT LOST"); break; }
             retryIn(2000, S_INIT, "ELM ERROR");
             break;
+        }
+        static const char *const opt[] = {"ATL0", "ATS0", "ATH0", "ATAT1", "ATSP0"};
+        for (const char *c : opt) {
+            if (!elm(c, OBD_CMD_TIMEOUT_MS) || !strstr(resp_, "OK"))
+                Serial.printf("[obd] %s not supported ('%s'), continuing\n", c, resp_);
         }
         state_ = S_SEARCH;
         break;
