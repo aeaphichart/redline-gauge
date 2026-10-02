@@ -67,11 +67,11 @@ If the splash is removed or the logo is changed, the status bar shows `UNOFFICIA
 Every value is saved in NVS and restored after a reboot.
 
 Serial commands (115200): `mode=sim|touch|serial|obd|custom` `theme=ice|lime|amber` `shift=6500`
-`beep=on|off` `peak=reset` `bench` (timing test) `help` — and `bright=80` when `BACKLIGHT_DIMMING` is 1
+`beep=on|off` `peak=reset` `obd=scan` `obd=AA:BB:CC:DD:EE:FF` `obdpin=1234` `bench` (timing test) `help` — and `bright=80` when `BACKLIGHT_DIMMING` is 1
 
 ### Status bar
 Dot color: 🟢 live data · 🔵 simulator · 🟡 (blinking) connecting · 🔴 error.
-The right side shows the session time, or a status message such as `BT PAIRING`, `ELM INIT`, `ECU SEARCH`, `NO ADAPTER`, `NO ECU`, `WAIT DATA`.
+The right side shows the session time, or a status message such as `BT SCAN`, `BT PAIRING`, `ELM INIT`, `ECU SEARCH`, `NO ADAPTER`, `NO ECU`, `WAIT DATA`.
 
 ### Warnings
 - RPM ≥ `RPM_SHIFT` → the bar flashes red, the RPM number turns red, the RGB LED strobes red, and there is a short beep.
@@ -90,9 +90,18 @@ SIM AUTO loops a scripted drive: idle → city → full-throttle pull through th
 
 ### 2. OBD BT — ELM327 Bluetooth Classic (real car)
 1. Plug the ELM327 into the car's OBD port and turn the ignition to ON / start the engine.
-2. Set `OBD_BT_NAME` / `OBD_BT_PIN` in `src/config.h` to match your adapter (usually `OBDII` / `1234`).
-   If you know the MAC, set `OBD_BT_MAC` — connecting is much faster (skips ~10 s of discovery).
-3. Select OBD BT mode. It goes BT PAIRING → ELM INIT → ECU SEARCH → green dot.
+   **Disconnect any phone from the adapter first** (close the OBD app / turn phone Bluetooth off):
+   an ELM327 accepts only one connection at a time.
+2. Select OBD BT mode. It goes BT SCAN → BT PAIRING → ELM INIT → ECU SEARCH → green dot.
+   - The scan (~10 s) lists every Bluetooth Classic device on the USB serial log and picks the one whose
+     name looks like an OBD adapter (`OBDII`, `OBD2`, `V-LINK`, `VEEPEAK`, `KONNWEI`, `Vgate`…).
+   - Its MAC is saved, so later boots connect straight away without scanning.
+   - The PIN is tried as 1234 → 0000 → 6789 → 1111 automatically.
+3. Still `NO ADAPTER`? Open `pio device monitor`, read the scan list, then type:
+   - `obd=AA:BB:CC:DD:EE:FF` to pick an adapter with an unusual name,
+   - `obdpin=xxxx` to fix the PIN,
+   - `obd=scan` to forget the saved adapter.
+   An empty scan list usually means the adapter is BLE-only (see below) or a phone is still connected to it.
 
 Reads: RPM (010C), speed (010D), coolant (0105), intake (010F), battery voltage (ATRV).
 RPM is polled every other request so the bar stays responsive. PIDs the car doesn't support are skipped automatically.

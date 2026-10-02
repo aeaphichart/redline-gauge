@@ -95,6 +95,7 @@ static void printHelp() {
         "\n=== REDLINE " REDLINE_VERSION " — crafted by birdlab.th (birdlab.moomdate.tech) ===\n"
         "  mode=sim|touch|serial|obd|custom   theme=ice|lime|amber   shift=7000\n"
         "  bright=20..100   beep=on|off   peak=reset   help\n"
+        "  obd=scan | obd=AA:BB:CC:DD:EE:FF   obdpin=1234|0000 (empty = auto)\n"
         "data (SERIAL mode):  rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3\n"
         "           or JSON:  {\"rpm\":3200,\"speed\":86,\"coolant\":87,\"voltage\":13.9}\n"));
 }
@@ -143,6 +144,14 @@ static void handleLine(char *line) {
 #endif
     } else if (keyIs(p, "beep", &v)) {
         s.beep = !strncasecmp(v, "on", 2) || *v == '1';
+    } else if (keyIs(p, "obdpin", &v)) {
+        char arg[16];
+        snprintf(arg, sizeof arg, "pin=%s", v);
+        ObdSource::command(arg);
+        return;
+    } else if (keyIs(p, "obd", &v)) {
+        if (!ObdSource::command(v)) Serial.println("[gauge] obd=scan | obd=AA:BB:CC:DD:EE:FF | obdpin=1234");
+        return;
     } else if (!strncasecmp(p, "bench", 5)) {
         runBench();
         return;

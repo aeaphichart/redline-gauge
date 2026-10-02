@@ -16,6 +16,10 @@ public:
     void end() override;
     void poll() override;
 
+    // Serial command tail after "obd=": "scan", "AA:BB:CC:DD:EE:FF" or "pin=0000".
+    // Saved to NVS; safe to call from another core. Returns false if not understood.
+    static bool command(const char *arg);
+
 private:
     enum State : uint8_t { S_BT_START, S_CONNECT, S_INIT, S_SEARCH, S_RUN, S_WAIT };
     State    state_ = S_BT_START;
@@ -26,8 +30,14 @@ private:
     uint8_t  errors_ = 0;
     uint8_t  noData_[5] = {};        // per-PID "NO DATA" counter, >=3 = unsupported
     char     resp_[96];
+    char     mac_[18] = {};          // adapter to connect to ("" = scan)
+    char     pin_[8] = {};           // fixed PIN ("" = cycle the common ones)
+    uint8_t  pinIdx_ = 0;
+    uint8_t  macFails_ = 0;
 
     void retryIn(uint32_t ms, State then, const char *msg);
-    bool command(const char *cmd, uint32_t timeoutMs);
+    bool elm(const char *cmd, uint32_t timeoutMs);
+    void loadTarget();
+    bool scan(char *macOut);
     bool readPid(int idx);
 };
