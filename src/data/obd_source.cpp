@@ -61,7 +61,7 @@ bool ObdSource::command(const char *line) {
 void ObdSource::loadTarget() {
     Preferences p;
     mac_[0] = pin_[0] = 0;
-    if (p.begin("obd", true)) {
+    if (p.begin("obd", false)) {   // read-write: creates the namespace, no NOT_FOUND log on first use
         if (p.isKey("mac")) p.getString("mac", mac_, sizeof mac_);
         if (p.isKey("pin")) p.getString("pin", pin_, sizeof pin_);
         p.end();

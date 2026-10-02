@@ -83,4 +83,6 @@
 // Verified on the CYD: its backlight goes completely dark with ANY PWM duty below 100 %
 // (20 % and ~43 % both blank the screen). So by default the backlight is driven plain HIGH
 // and the BRIGHTNESS setting is hidden. Set 1 only on a board whose backlight really dims.
+#ifndef BACKLIGHT_DIMMING          // (#ifndef so a board env can turn it on with -D)
 #define BACKLIGHT_DIMMING 0
+#endif
