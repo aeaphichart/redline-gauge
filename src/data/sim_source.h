@@ -15,6 +15,8 @@ public:
 
     // TOUCH mode input, written from the UI task. 0..1
     static volatile float touchThrottle;
+    // Also publish hybrid battery SOC / kW (set from main when PANELS = HYBRID).
+    static volatile bool hybrid;
 
     // Advance the model by dt seconds (public for the host preview).
     void step(float dt);
@@ -35,6 +37,7 @@ private:
 
     // thermal / electrical
     float coolant_ = 0, iat_ = 0, volt_ = 0, ambient_ = 32;
+    float soc_ = 62, kw_ = 0;    // hybrid battery (only published when `hybrid`)
 
     // script (AUTO)
     int   phase_ = 0;

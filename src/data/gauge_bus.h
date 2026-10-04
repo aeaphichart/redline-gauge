@@ -12,6 +12,8 @@ enum Channel : uint8_t {
     CH_IAT,         // intake air °C
     CH_GEAR,        // 0 = neutral, 1..n; leave unpublished to let the UI estimate it
     CH_THROTTLE,    // 0..100 %, informational
+    CH_HV_SOC,      // hybrid battery state of charge, %
+    CH_HV_KW,       // hybrid battery power, kW: + = driving the motor, - = charging / regen
     CH_COUNT
 };
 

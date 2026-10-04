@@ -132,7 +132,7 @@ bool ObdSource::scan(char *macOut) {
 }
 
 // PIDs we read. Index order matters for noData_[] and the schedule below.
-enum { P_RPM, P_SPEED, P_COOLANT, P_IAT, P_VOLT };
+enum { P_RPM, P_SPEED, P_COOLANT, P_IAT, P_VOLT, P_HV_SOC, P_HV, P_COUNT };
 struct PidDef { const char *cmd; uint8_t pid; Channel ch; };
 static const PidDef kPids[] = {
     {"010C", 0x0C, CH_RPM},
@@ -140,11 +140,15 @@ static const PidDef kPids[] = {
     {"0105", 0x05, CH_COOLANT},
     {"010F", 0x0F, CH_IAT},
     {"ATRV", 0x00, CH_VOLTAGE},     // adapter's own supply-pin reading = battery voltage
+    {"015B", 0x5B, CH_HV_SOC},      // hybrids only (e.g. Honda e:HEV); others: skipped via 0140
+    {"019A", 0x9A, CH_HV_KW},       // hybrid battery volts x amps -> kW
 };
+static_assert(sizeof kPids / sizeof kPids[0] == P_COUNT, "kPids / enum mismatch");
 // RPM every other request, speed often, slow-moving temps/voltage rarely.
+// Hybrid PIDs are skipped automatically on cars that don't list them.
 static const uint8_t kSchedule[] = {
-    P_RPM, P_SPEED, P_RPM, P_COOLANT, P_RPM, P_SPEED, P_RPM, P_IAT,
-    P_RPM, P_SPEED, P_RPM, P_VOLT,
+    P_RPM, P_SPEED, P_RPM, P_COOLANT, P_RPM, P_HV, P_RPM, P_SPEED, P_RPM, P_IAT,
+    P_RPM, P_HV, P_RPM, P_SPEED, P_RPM, P_VOLT, P_RPM, P_HV_SOC,
 };
 
 void ObdSource::retryIn(uint32_t ms, State then, const char *msg) {
@@ -161,7 +165,7 @@ void ObdSource::begin() {
     pinIdx_ = startPinIdx();
     macFails_ = 0;
     nodataRun_ = 0;
-    pidMask_ = 0;
+    memset(pidMask_, 0, sizeof pidMask_);
     s_retarget = false;
     loadTarget();
     errors_ = 0;
@@ -183,13 +187,17 @@ bool ObdSource::elm(const char *cmd, uint32_t timeoutMs) {
     while (SerialBT.available()) SerialBT.read();
     SerialBT.print(cmd);
     SerialBT.print('\r');
-    size_t n = 0;
+    size_t n = 0, lineStart = 0;
     uint32_t t0 = millis();
     while (millis() - t0 < timeoutMs) {
         while (SerialBT.available()) {
             char c = (char)SerialBT.read();
             if (c == '>') { resp_[n] = 0; return true; }
-            if (c == ' ' || c == '\r' || c == '\n' || c == 0) continue;
+            if (c == '\r' || c == '\n') { lineStart = n; continue; }
+            if (c == ' ' || c == 0) continue;
+            // multi-frame CAN replies number their lines "0:", "1:" …: drop the numbers so
+            // the payload reads as one hex string ("BUS INIT:" etc. are longer, untouched)
+            if (c == ':' && n == lineStart + 1) { n = lineStart; continue; }
             if (n < sizeof(resp_) - 1) resp_[n++] = (char)toupper((unsigned char)c);
         }
         delay(2);
@@ -206,6 +214,17 @@ bool ObdSource::readPid(int idx) {
     if (d.pid == 0) {                                   // ATRV -> "13.9V"
         if (obdParseVolt(resp_, v) == OBD_OK) bus::publish(d.ch, v);
         return true;
+    }
+    if (d.pid == 0x9A) {
+        float volts, amps;
+        switch (obdParseHybrid(resp_, volts, amps)) {
+            case OBD_OK:     noData_[idx] = 0; nodataRun_ = 0;
+                             bus::publish(CH_HV_KW, volts * amps * HV_CURRENT_SIGN / 1000.0f);
+                             return true;
+            case OBD_NODATA: if (noData_[idx] < 255) noData_[idx]++;
+                             return true;
+            default:         return false;
+        }
     }
     switch (obdParsePid(resp_, d.pid, v)) {
         case OBD_OK:     noData_[idx] = 0; nodataRun_ = 0; bus::publish(d.ch, v); return true;
@@ -228,7 +247,10 @@ void ObdSource::forgetBond(const char *mac) {
 bool ObdSource::usable(int idx) const {
     uint8_t pid = kPids[idx].pid;
     if (pid == 0) return true;                             // ATRV is the adapter itself
-    if (pidMask_) return obdPidSupported(pidMask_, pid);
+    if (pidMask_[0]) {
+        int pg = (pid - 1) / 0x20;
+        return pg < 5 && obdPidSupported(pidMask_[pg], pid, pg * 0x20);
+    }
     return noData_[idx] < 3;
 }
 
@@ -334,10 +356,20 @@ void ObdSource::poll() {
         if (elm("0100", 10000) && strstr(resp_, "4100")) {
             // The 0100 reply says which PIDs 01-20 this ECU has; poll only those. Per-PID
             // "NO DATA" counts start fresh, so a sleepy ECU doesn't disable a PID for good.
-            pidMask_ = obdSupportedPids(resp_);
+            memset(pidMask_, 0, sizeof pidMask_);
+            pidMask_[0] = obdSupportedPids(resp_);
+            // follow the chain: the last bit of each page says whether the next page exists
+            for (int pg = 1; pg < 5 && (pidMask_[pg - 1] & 1); pg++) {
+                char cmd[5];
+                snprintf(cmd, sizeof cmd, "01%02X", pg * 0x20);
+                if (!elm(cmd, OBD_CMD_TIMEOUT_MS * 2)) break;
+                pidMask_[pg] = obdSupportedPidsPage(resp_, pg * 0x20);
+            }
             memset(noData_, 0, sizeof noData_);
             nodataRun_ = 0;
-            Serial.printf("[obd] ECU found (PIDs 01-20: %08lX), streaming\n", (unsigned long)pidMask_);
+            Serial.printf("[obd] ECU found, PIDs 01-A0: %08lX %08lX %08lX %08lX %08lX\n",
+                          (unsigned long)pidMask_[0], (unsigned long)pidMask_[1], (unsigned long)pidMask_[2],
+                          (unsigned long)pidMask_[3], (unsigned long)pidMask_[4]);
             bus::setLink(Link::Live, "");
             errors_ = 0;
             state_ = S_RUN;

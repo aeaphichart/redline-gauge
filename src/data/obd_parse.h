@@ -19,14 +19,14 @@ inline int obdHexByte(const char *p) {
     return (a < 0 || b < 0) ? -1 : a * 16 + b;
 }
 
-// Mode 01 PIDs used by the gauge: 0C rpm, 0D speed, 05 coolant, 0F intake.
+// Mode 01 PIDs used by the gauge: 0C rpm, 0D speed, 05 coolant, 0F intake,
+// 5B hybrid battery remaining (SOC %). 9A (hybrid battery V/A) has its own parser.
 // Several ECUs may answer; the first "41<pid>" wins.
 inline ObdResult obdParsePid(const char *resp, uint8_t pid, float &out) {
-    if (strstr(resp, "NODATA")) return OBD_NODATA;
     char tag[5];
     snprintf(tag, sizeof tag, "41%02X", pid);
-    const char *p = strstr(resp, tag);
-    if (!p) return OBD_BAD;
+    const char *p = strstr(resp, tag);          // data from any ECU wins over another's NO DATA
+    if (!p) return strstr(resp, "NODATA") ? OBD_NODATA : OBD_BAD;
     int A = obdHexByte(p + 4);
     if (A < 0) return OBD_BAD;
     switch (pid) {
@@ -39,6 +39,7 @@ inline ObdResult obdParsePid(const char *resp, uint8_t pid, float &out) {
         case 0x0D: out = (float)A; return OBD_OK;
         case 0x05:
         case 0x0F: out = A - 40.0f; return OBD_OK;
+        case 0x5B: out = A * 100.0f / 255.0f; return OBD_OK;
         default:   return OBD_BAD;
     }
 }
@@ -85,11 +86,28 @@ inline bool obdNameLooksLikeAdapter(const char *name, const char *preferred) {
     return false;
 }
 
-// "4100BE3EB811" -> 0xBE3EB811: which PIDs 01..20 the ECU supports (bit 31 = PID 01).
+// PID 9A, hybrid/EV battery: 41 9A A B C D E F. Voltage = (C*256+D)/64 V,
+// current = signed (E*256+F)/10 A (SAE J1979-DA). Multi-frame on most cars: the
+// caller must strip the "0:" / "1:" frame numbers first (ObdSource::elm does).
+inline ObdResult obdParseHybrid(const char *resp, float &volts, float &amps) {
+    const char *p = strstr(resp, "419A");
+    if (!p) return strstr(resp, "NODATA") ? OBD_NODATA : OBD_BAD;
+    int b[6];
+    for (int i = 0; i < 6; i++)
+        if ((b[i] = obdHexByte(p + 4 + i * 2)) < 0) return OBD_BAD;
+    volts = (b[2] * 256 + b[3]) / 64.0f;
+    amps = (int16_t)(uint16_t)(b[4] * 256 + b[5]) / 10.0f;
+    return OBD_OK;
+}
+
+// Supported-PID bitmask of one page: "4100BE3EB811" -> 0xBE3EB811 (base 0x00: bit 31 =
+// PID 01). Base 0x20 reads "4120…" (PIDs 21-40), 0x40 "4140…" and so on.
 // Several ECUs may answer; their masks are OR-ed. 0 = no valid reply.
-inline uint32_t obdSupportedPids(const char *resp) {
+inline uint32_t obdSupportedPidsPage(const char *resp, uint8_t base) {
+    char tag[5];
+    snprintf(tag, sizeof tag, "41%02X", base);
     uint32_t mask = 0;
-    for (const char *p = strstr(resp, "4100"); p; p = strstr(p + 4, "4100")) {
+    for (const char *p = strstr(resp, tag); p; p = strstr(p + 4, tag)) {
         uint32_t m = 0;
         int i = 0;
         for (; i < 4; i++) {
@@ -101,6 +119,7 @@ inline uint32_t obdSupportedPids(const char *resp) {
     }
     return mask;
 }
-inline bool obdPidSupported(uint32_t mask, uint8_t pid) {
-    return pid >= 1 && pid <= 0x20 && ((mask >> (32 - pid)) & 1);
+inline uint32_t obdSupportedPids(const char *resp) { return obdSupportedPidsPage(resp, 0x00); }
+inline bool obdPidSupported(uint32_t mask, uint8_t pid, uint8_t base = 0x00) {
+    return pid > base && pid <= base + 0x20 && ((mask >> (32 - (pid - base))) & 1);
 }

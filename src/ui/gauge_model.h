@@ -25,6 +25,9 @@ struct GaugeView {
     bool  coolValid;  int   coolant; Level coolLvl;
     bool  voltValid;  float volt;    Level voltLvl;
     bool  iatValid;   int   iat;     Level iatLvl;
+    bool  hybrid;        // show the hybrid panel set (settings, or AUTO + data seen)
+    bool  socValid;   int   soc;     Level socLvl;
+    bool  kwValid;    float kw;
     bool  blink;         // shared slow blink phase for critical values
 
     // status bar
@@ -40,6 +43,8 @@ public:
     void reset(uint32_t now);    // new source: restart timer, peaks, smoothing
     void resetPeaks();
     void setShiftRpm(int rpm) { shiftRpm_ = rpm; }
+    void setPanels(uint8_t set) { panels_ = set; }      // PanelSet
+    void setGearHidden(bool off) { gearOff_ = off; }
     void update(const GaugeSnapshot &s, uint32_t now, const char *modeName, GaugeView &out);
 
 private:
@@ -49,6 +54,9 @@ private:
     uint32_t peakAt_ = 0;
     int      sessionPeak_ = 0;
     int      shiftRpm_ = RPM_SHIFT;
+    uint8_t  panels_ = 0;            // PANELS_AUTO
+    bool     gearOff_ = false;
+    bool     hybridSeen_ = false;    // AUTO latch: stays hybrid until the source changes
 };
 
 // Estimate gear from rpm/speed using config.h ratios. 0 = no match (clutch/neutral).

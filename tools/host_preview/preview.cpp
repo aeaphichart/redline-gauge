@@ -33,11 +33,15 @@ static void save(const char *path) {
     fclose(f);
 }
 
+static float g_soc = -1, g_kw = 0;      // hybrid frames: >= 0 publishes HV data
+static bool  g_gearOff = false;
+
 static void staticFrame(const char *path, float rpm, float spd, float clt, float v, float iat, int gear,
                         Link link, const char *msg, const char *mode) {
     GaugeModel m;
     GaugeView view;
     m.setShiftRpm(7000);
+    m.setGearHidden(g_gearOff);
     bus::clear();
     g_host_ms = 100000;
     m.reset(g_host_ms - 754000);
@@ -51,6 +55,7 @@ static void staticFrame(const char *path, float rpm, float spd, float clt, float
         if (v > 0) bus::publish(CH_VOLTAGE, v);
         if (iat > -99) bus::publish(CH_IAT, iat);
         if (gear >= 0) bus::publish(CH_GEAR, gear);
+        if (g_soc >= 0) { bus::publish(CH_HV_SOC, g_soc); bus::publish(CH_HV_KW, g_kw); }
         GaugeSnapshot s;
         bus::snapshot(s);
         m.update(s, g_host_ms, mode, view);
@@ -87,6 +92,13 @@ int main() {
     gauge_ui::setTheme(kThemes[THEME_LIME]);
     staticFrame("out/shift.ppm", 7250, 142, 106, 11.6f, 72, 4, Link::Simulated, "", "SIM AUTO");
     staticFrame("out/cold.ppm", 1150, 0, 45, 12.2f, 30, 0, Link::Live, "", "SERIAL");
+    gauge_ui::setTheme(kThemes[THEME_AMBER]);
+    gauge_ui::setTheme(kThemes[THEME_ICE]);
+    g_soc = 61; g_kw = 18.5f; g_gearOff = true;          // Civic e:HEV style: EV drive, gear hidden
+    staticFrame("out/hybrid_ev.ppm", 0, 42, 84, 12.4f, 35, -1, Link::Live, "", "OBD BT");
+    g_soc = 66; g_kw = -22.4f;                           // braking: regen
+    staticFrame("out/hybrid_regen.ppm", 1250, 63, 88, 12.4f, 35, -1, Link::Live, "", "OBD BT");
+    g_soc = -1; g_gearOff = false;
     gauge_ui::setTheme(kThemes[THEME_AMBER]);
     staticFrame("out/nodata.ppm", -1, -1, -100, -1, -100, -1, Link::Connecting, "BT PAIRING", "OBD BT");
 

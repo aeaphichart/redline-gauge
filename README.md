@@ -63,11 +63,14 @@ If the splash is removed or the logo is changed, the status bar shows `UNOFFICIA
 - **SHIFT LIGHT RPM**: ± 250 (3,000 – `RPM_MAX`)
 - **BRIGHTNESS**: hidden by default — on some CYD batches the backlight goes dark with any PWM dimming, so it runs full-on. Other batches dim fine: flash `-e esp32dev-dim` (or set `BACKLIGHT_DIMMING 1` in `config.h`) to get a 20–100% control back. Try it: if the screen goes black at 50%, go back to `esp32dev`
 - **BEEP ON/OFF**, **RESET PEAK**, **DONE** to go back
+- **PANEL AUTO / STD / HYB**: right-hand panels. STD = COOLANT · VOLTAGE · INTAKE; HYB = COOLANT · HV BATT (%) · HV POWER (kW, negative = regen);
+  AUTO switches to HYB as soon as the source delivers hybrid battery data (e.g. OBD on a Honda e:HEV)
+- **GEAR AUTO / OFF**: OFF hides the gear box — use it on hybrids and CVTs, where an estimated gear means nothing
 
 Every value is saved in NVS and restored after a reboot.
 
 Serial commands (115200): `mode=sim|touch|serial|obd|custom` `theme=ice|lime|amber` `shift=6500`
-`beep=on|off` `peak=reset` `obd=scan` `obd=AA:BB:CC:DD:EE:FF` `obdpin=1234` `bench` (timing test) `help` — and `bright=80` when `BACKLIGHT_DIMMING` is 1
+`beep=on|off` `peak=reset` `panels=auto|standard|hybrid` `gearmode=auto|off` `obd=scan` `obd=AA:BB:CC:DD:EE:FF` `obdpin=1234` `bench` (timing test) `help` — and `bright=80` when `BACKLIGHT_DIMMING` is 1
 
 ### Status bar
 Dot color: 🟢 live data · 🔵 simulator · 🟡 (blinking) connecting · 🔴 error.
@@ -103,7 +106,14 @@ SIM AUTO loops a scripted drive: idle → city → full-throttle pull through th
    - `obd=scan` to forget the saved adapter.
    An empty scan list usually means the adapter is BLE-only (see below) or a phone is still connected to it.
 
-Reads: RPM (010C), speed (010D), coolant (0105), intake (010F), battery voltage (ATRV).
+Reads: RPM (010C), speed (010D), coolant (0105), intake (010F), battery voltage (ATRV), and on hybrids
+HV battery SOC (015B) and HV battery power from voltage × current (019A). Only PIDs the car lists in its
+supported-PID bitmasks (0100 … 0180) are polled.
+
+**Hybrids (e.g. Honda Civic e:HEV)**: set GEAR to OFF (there is no stepped gearbox). PANEL AUTO turns on
+HV BATT / HV POWER once the car answers 015B / 019A. In EV mode the engine is off, so RPM reads 0. If HV POWER
+reads negative while accelerating, set `HV_CURRENT_SIGN -1` in `config.h`. Intake temp (010F) is not reported by
+the Civic e:HEV.
 RPM is polled every other request so the bar stays responsive. PIDs the car doesn't support are skipped automatically.
 Gear is estimated from rpm/speed → set `GEAR_RATIOS`, `FINAL_DRIVE`, `TIRE_CIRCUMFERENCE_M` for your car
 (or `GEAR_COUNT 0` to hide it).
@@ -174,7 +184,7 @@ battery divider on GPIO 35, oil-temp NTC on `in.coolant` with `PANEL1_LABEL "OIL
 ## Tests
 
 ```bash
-~/.platformio/penv/bin/pio test -e native    # 23 host tests: parsers, model, renderer, settings, simulator, theme assets
+~/.platformio/penv/bin/pio test -e native    # 25 host tests: parsers, model, renderer, settings, simulator, theme assets
 ```
 CI (GitHub Actions) runs the tests and builds both firmware variants on every push.
 

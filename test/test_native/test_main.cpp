@@ -92,7 +92,10 @@ static void test_fonts_cover_every_ui_string() {
     TEST_ASSERT_TRUE(fontHas(font_value, "0123456789.-"));
     TEST_ASSERT_TRUE(fontHas(font_label, "SPEED " PANEL1_LABEL PANEL2_LABEL PANEL3_LABEL));
     TEST_ASSERT_TRUE(fontHas(font_small, "ENGINE SPEED PEAK RPM km/h GEAR °C V SETUP " STATUS_TITLE
-                                         "BEEP ON OFF RESET THEME DATA SOURCE SHIFT LIGHT BRIGHTNESS"));
+                                         "BEEP ON OFF RESET THEME DATA SOURCE SHIFT LIGHT BRIGHTNESS % kW"));
+    for (int i = 0; i < PANELS_COUNT; i++) TEST_ASSERT_TRUE(fontHas(font_small, settings_ui::kPanelLabels[i]));
+    TEST_ASSERT_TRUE(fontHas(font_small, "GEAR AUTO GEAR OFF"));
+    TEST_ASSERT_TRUE(fontHas(font_label, HYBRID_PANEL2_LABEL HYBRID_PANEL3_LABEL));
     TEST_ASSERT_TRUE(fontHas(font_ui, "SETTINGS DONE + - 7,000 100%"));
     for (int t = 0; t < THEME_COUNT; t++) TEST_ASSERT_TRUE(fontHas(font_ui, kThemes[t].name));
     for (int i = 0; i < SRC_COUNT; i++) TEST_ASSERT_TRUE(fontHas(font_ui, settings_ui::kSourceLabels[i]));
@@ -229,6 +232,69 @@ static void test_obd_supported_pid_mask() {
                             obdSupportedPids("SEARCHING...4100981800014100000800 00"));
     TEST_ASSERT_EQUAL_HEX32(0, obdSupportedPids("NODATA"));
     TEST_ASSERT_EQUAL_HEX32(0, obdSupportedPids("4100BE3E"));   // truncated
+}
+
+static void test_obd_hybrid_pids() {
+    float v, a;
+    // Civic e:HEV capture: SOC 0x9D -> 61.6 %
+    TEST_ASSERT_EQUAL(OBD_OK, obdParsePid("415B9D", 0x5B, v));
+    TEST_ASSERT_FLOAT_WITHIN(0.1f, 61.6f, v);
+    // 9A after frame-number stripping: A=1F B=07, 40C4, 050C -> 259.06 V, 129.2 A
+    TEST_ASSERT_EQUAL(OBD_OK, obdParseHybrid("00B419A1F0740C4050C00000000", v, a));
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 259.06f, v);
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, 129.2f, a);
+    TEST_ASSERT_EQUAL(OBD_OK, obdParseHybrid("419A1F0740C4FF38", v, a));        // regen: -20.0 A
+    TEST_ASSERT_FLOAT_WITHIN(0.01f, -20.0f, a);
+    TEST_ASSERT_EQUAL(OBD_NODATA, obdParseHybrid("NODATA", v, a));
+    TEST_ASSERT_EQUAL(OBD_BAD, obdParseHybrid("419A0740", v, a));             // truncated
+    // one ECU answers, another says NO DATA: the data wins
+    TEST_ASSERT_EQUAL(OBD_OK, obdParsePid("NODATA410C1AF8", 0x0C, v));
+    // supported-PID pages: 5B lives on page 0x40, 9A on 0x80
+    uint32_t p40 = obdSupportedPidsPage("4140FED08420", 0x40);
+    TEST_ASSERT_EQUAL_HEX32(0xFED08420, p40);
+    TEST_ASSERT_TRUE(obdPidSupported(0x00000020u, 0x5B, 0x40));
+    TEST_ASSERT_FALSE(obdPidSupported(0x00000020u, 0x5A, 0x40));
+    TEST_ASSERT_TRUE(obdPidSupported(0x00000040u, 0x9A, 0x80));
+    TEST_ASSERT_FALSE(obdPidSupported(0xFFFFFFFFu, 0x9A, 0x40));              // wrong page
+}
+
+static void test_model_hybrid_panels_and_gear_off() {
+    GaugeModel m;
+    GaugeSnapshot s = {};
+    GaugeView v;
+    s.link = Link::Live;
+    g_host_ms = 10000;
+    m.reset(g_host_ms);
+    s.value[CH_RPM] = 2000; s.stamp[CH_RPM] = g_host_ms;
+    s.value[CH_SPEED] = 60; s.stamp[CH_SPEED] = g_host_ms;
+    m.update(s, g_host_ms, "OBD", v);
+    TEST_ASSERT_FALSE(v.hybrid);                       // AUTO, no hybrid data yet
+    TEST_ASSERT_TRUE(v.gear >= 0);
+    s.value[CH_HV_SOC] = 61; s.stamp[CH_HV_SOC] = g_host_ms;
+    m.update(s, g_host_ms, "OBD", v);
+    TEST_ASSERT_TRUE(v.hybrid);                        // AUTO switches on hybrid data
+    TEST_ASSERT_EQUAL(61, v.soc);
+    g_host_ms += 10000;                                // data goes stale: stays hybrid (latched)
+    m.update(s, g_host_ms, "OBD", v);
+    TEST_ASSERT_TRUE(v.hybrid);
+    TEST_ASSERT_FALSE(v.socValid);
+    m.reset(g_host_ms);                                // new source: latch cleared
+    m.update(s, g_host_ms, "OBD", v);
+    TEST_ASSERT_FALSE(v.hybrid);
+    m.setPanels(PANELS_HYBRID);
+    m.update(s, g_host_ms, "OBD", v);
+    TEST_ASSERT_TRUE(v.hybrid);
+    m.setPanels(PANELS_STANDARD);
+    s.stamp[CH_HV_SOC] = g_host_ms;
+    m.update(s, g_host_ms, "OBD", v);
+    TEST_ASSERT_FALSE(v.hybrid);                       // STANDARD ignores hybrid data
+    m.setGearHidden(true);
+    s.stamp[CH_RPM] = s.stamp[CH_SPEED] = g_host_ms;
+    m.update(s, g_host_ms, "OBD", v);
+    TEST_ASSERT_EQUAL(-1, v.gear);
+    s.value[CH_GEAR] = 3; s.stamp[CH_GEAR] = g_host_ms;
+    m.update(s, g_host_ms, "OBD", v);
+    TEST_ASSERT_EQUAL(-1, v.gear);                     // even a sent gear stays hidden
 }
 
 static void test_gear_estimate() {
@@ -448,7 +514,17 @@ static void test_settings_taps() {
     TEST_ASSERT_EQUAL(settings_ui::ACT_CHANGED, settings_ui::tap(270, 163, s));  // CUSTOM source
     TEST_ASSERT_EQUAL_UINT8(SRC_CUSTOM, s.source);
     TEST_ASSERT_EQUAL(settings_ui::ACT_CLOSE, settings_ui::tap(280, 14, s));     // DONE
-    TEST_ASSERT_EQUAL(settings_ui::ACT_RESET_PEAK, settings_ui::tap(230, 229, s));
+    TEST_ASSERT_EQUAL(settings_ui::ACT_RESET_PEAK, settings_ui::tap(117, 229, s));
+    TEST_ASSERT_EQUAL(settings_ui::ACT_CHANGED, settings_ui::tap(191, 229, s));  // PANELS cycles
+    TEST_ASSERT_EQUAL_UINT8(PANELS_STANDARD, s.panels);
+    settings_ui::tap(191, 229, s);
+    TEST_ASSERT_EQUAL_UINT8(PANELS_HYBRID, s.panels);
+    settings_ui::tap(191, 229, s);
+    TEST_ASSERT_EQUAL_UINT8(PANELS_AUTO, s.panels);
+    TEST_ASSERT_EQUAL(settings_ui::ACT_CHANGED, settings_ui::tap(266, 229, s));  // GEAR
+    TEST_ASSERT_EQUAL_UINT8(GEARMODE_OFF, s.gearMode);
+    settings_ui::tap(266, 229, s);
+    TEST_ASSERT_EQUAL_UINT8(GEARMODE_AUTO, s.gearMode);
     TEST_ASSERT_EQUAL(settings_ui::ACT_NONE, settings_ui::tap(160, 144, s));     // between theme names and sources
 }
 
@@ -471,7 +547,7 @@ static void test_settings_limits() {
     TEST_ASSERT_EQUAL_UINT8(100, s.brightness);
 #endif
     bool beep = s.beep;
-    settings_ui::tap(60, 229, s);                                                // BEEP toggle
+    settings_ui::tap(40, 229, s);                                                // BEEP toggle
     TEST_ASSERT_NOT_EQUAL(beep, s.beep);
 }
 
@@ -490,6 +566,8 @@ int main(int, char **) {
     RUN_TEST(test_obd_parse);
     RUN_TEST(test_obd_adapter_selection);
     RUN_TEST(test_obd_supported_pid_mask);
+    RUN_TEST(test_obd_hybrid_pids);
+    RUN_TEST(test_model_hybrid_panels_and_gear_off);
     RUN_TEST(test_gear_estimate);
     RUN_TEST(test_model_levels_and_shift);
     RUN_TEST(test_model_marks_stale_values);

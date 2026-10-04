@@ -1,5 +1,6 @@
 #include "ui/gauge_model.h"
 #include "config.h"
+#include "settings.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -36,6 +37,7 @@ void GaugeModel::reset(uint32_t now) {
     t0_ = now;
     last_ = now;
     rpmSmooth_ = speedSmooth_ = 0;
+    hybridSeen_ = false;
     resetPeaks();
 }
 
@@ -82,7 +84,8 @@ void GaugeModel::update(const GaugeSnapshot &s, uint32_t now, const char *modeNa
     if (v.speed > 999) v.speed = 999;
     if (v.speed < 0) v.speed = 0;
 
-    if (fresh(s, CH_GEAR, now)) v.gear = (int)(s.value[CH_GEAR] + 0.5f);
+    if (gearOff_) v.gear = -1;
+    else if (fresh(s, CH_GEAR, now)) v.gear = (int)(s.value[CH_GEAR] + 0.5f);
     else if (v.rpmValid && v.speedValid) v.gear = estimateGear(rpm, spd);
     else v.gear = -1;
 
@@ -101,6 +104,14 @@ void GaugeModel::update(const GaugeSnapshot &s, uint32_t now, const char *modeNa
     v.iatValid = fresh(s, CH_IAT, now);
     v.iat = (int)lroundf(s.value[CH_IAT]);
     v.iatLvl = v.iat >= IAT_CRIT ? LV_CRIT : v.iat >= IAT_WARN ? LV_WARN : LV_NORMAL;
+
+    v.socValid = fresh(s, CH_HV_SOC, now);
+    v.soc = (int)lroundf(s.value[CH_HV_SOC]);
+    v.socLvl = v.soc <= SOC_LOW_CRIT ? LV_CRIT : v.soc <= SOC_LOW_WARN ? LV_WARN : LV_NORMAL;
+    v.kwValid = fresh(s, CH_HV_KW, now);
+    v.kw = s.value[CH_HV_KW];
+    if (v.socValid || v.kwValid) hybridSeen_ = true;
+    v.hybrid = panels_ == PANELS_HYBRID || (panels_ == PANELS_AUTO && hybridSeen_);
 
     // ---- status bar ---------------------------------------------------------------
     v.mode = modeName;

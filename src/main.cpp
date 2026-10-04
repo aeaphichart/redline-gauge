@@ -54,6 +54,10 @@ static void loadSettings() {
     settings.shiftRpm   = prefs.getUShort("shift", settings.shiftRpm);
     settings.brightness = prefs.getUChar("bright", settings.brightness);
     settings.beep       = prefs.getBool("beep", settings.beep);
+    settings.panels     = prefs.getUChar("panels", settings.panels);
+    settings.gearMode   = prefs.getUChar("gearm", settings.gearMode);
+    if (settings.panels >= PANELS_COUNT) settings.panels = PANELS_AUTO;
+    if (settings.gearMode >= GEARMODE_COUNT) settings.gearMode = GEARMODE_AUTO;
     if (settings.theme >= THEME_COUNT) settings.theme = 0;
     if (settings.source >= SRC_COUNT) settings.source = SRC_SIM_AUTO;
     settings.shiftRpm = constrain(settings.shiftRpm, Settings::kShiftMin, Settings::kShiftMax);
@@ -66,6 +70,8 @@ static void saveSettings() {   // Preferences only writes keys whose value chang
     prefs.putUShort("shift", settings.shiftRpm);
     prefs.putUChar("bright", settings.brightness);
     prefs.putBool("beep", settings.beep);
+    prefs.putUChar("panels", settings.panels);
+    prefs.putUChar("gearm", settings.gearMode);
 }
 
 static void backlightBegin() {
@@ -95,6 +101,7 @@ static void printHelp() {
         "\n=== REDLINE " REDLINE_VERSION " — crafted by birdlab.th (birdlab.moomdate.tech) ===\n"
         "  mode=sim|touch|serial|obd|custom   theme=ice|lime|amber   shift=7000\n"
         "  bright=20..100   beep=on|off   peak=reset   help\n"
+        "  panels=auto|standard|hybrid   gearmode=auto|off\n"
         "  obd=scan | obd=AA:BB:CC:DD:EE:FF   obdpin=1234|0000 (empty = auto)\n"
         "data (SERIAL mode):  rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3\n"
         "           or JSON:  {\"rpm\":3200,\"speed\":86,\"coolant\":87,\"voltage\":13.9}\n"));
@@ -142,6 +149,15 @@ static void handleLine(char *line) {
         Serial.println("[gauge] brightness is fixed: this board's backlight can't dim (BACKLIGHT_DIMMING 0)");
         return;
 #endif
+    } else if (keyIs(p, "panels", &v)) {
+        if (!strncasecmp(v, "auto", 4)) s.panels = PANELS_AUTO;
+        else if (!strncasecmp(v, "std", 3) || !strncasecmp(v, "standard", 8)) s.panels = PANELS_STANDARD;
+        else if (!strncasecmp(v, "hyb", 3)) s.panels = PANELS_HYBRID;
+        else { Serial.println("[gauge] panels=auto|standard|hybrid"); return; }
+    } else if (keyIs(p, "gearmode", &v)) {           // not "gear=": that's a data key
+        if (!strncasecmp(v, "auto", 4) || !strncasecmp(v, "on", 2)) s.gearMode = GEARMODE_AUTO;
+        else if (!strncasecmp(v, "off", 3)) s.gearMode = GEARMODE_OFF;
+        else { Serial.println("[gauge] gearmode=auto|off"); return; }
     } else if (keyIs(p, "beep", &v)) {
         s.beep = !strncasecmp(v, "on", 2) || *v == '1';
     } else if (keyIs(p, "obdpin", &v)) {
@@ -169,9 +185,15 @@ static void handleLine(char *line) {
     if (changed) {
         applySettings(s);
         // confirm, so someone typing into `pio device monitor` sees it worked
-        Serial.printf("[gauge] ok  theme=%s shift=%u bright=%u%% beep=%s source=%s\n",
-                      kThemes[settings.theme].key, settings.shiftRpm, settings.brightness,
-                      settings.beep ? "on" : "off", sources[settings.source]->name());
+        static const char *const panelKeys[PANELS_COUNT] = { "auto", "standard", "hybrid" };
+        Serial.printf("[gauge] ok  theme=%s shift=%u beep=%s panels=%s gearmode=%s source=%s",
+                      kThemes[settings.theme].key, settings.shiftRpm, settings.beep ? "on" : "off",
+                      panelKeys[settings.panels], settings.gearMode == GEARMODE_OFF ? "off" : "auto",
+                      sources[settings.source]->name());
+#if BACKLIGHT_DIMMING
+        Serial.printf(" bright=%u%%", settings.brightness);
+#endif
+        Serial.println();
         return;
     }
     int n = SerialSource::feed(p, activeSrc == SRC_SERIAL);
@@ -281,6 +303,9 @@ static void applySettings(const Settings &next, bool repaint) {
     }
     if (next.brightness != prev.brightness) setBacklight(next.brightness);
     model.setShiftRpm(next.shiftRpm);
+    model.setPanels(next.panels);
+    model.setGearHidden(next.gearMode == GEARMODE_OFF);
+    SimSource::hybrid = next.panels == PANELS_HYBRID;
     if (screen == SCR_GAUGE) {
         if (next.theme != prev.theme) gauge_ui::setTheme(kThemes[next.theme]);
     } else if (repaint) {
@@ -435,6 +460,9 @@ void setup() {
 
     gauge_ui::begin(pushToTft, kThemes[settings.theme]);
     model.setShiftRpm(settings.shiftRpm);
+    model.setPanels(settings.panels);
+    model.setGearHidden(settings.gearMode == GEARMODE_OFF);
+    SimSource::hybrid = settings.panels == PANELS_HYBRID;
     requestedSrc = settings.source;
 
     xTaskCreatePinnedToCore(dataTask, "data", 8192, nullptr, 2, nullptr, 0);

@@ -58,6 +58,9 @@ ls /dev/cu.*                     # หาพอร์ต (เลขเปลี�
 - **SHIFT LIGHT RPM** — รอบที่ไฟเตือนเปลี่ยนเกียร์ ปรับทีละ 250
 - **BRIGHTNESS** — ซ่อนไว้เป็นค่าเริ่มต้น เพราะ CYD บางล็อตไฟหลังจอดับทันทีเมื่อหรี่ด้วย PWM แต่บางล็อตหรี่ได้ปกติ ลองแฟลชด้วย `-e esp32dev-dim` (หรือตั้ง `BACKLIGHT_DIMMING 1` ใน `config.h`) จะได้ปุ่มปรับ 20–100% กลับมา ถ้าตั้ง 50% แล้วจอดับ ให้กลับไปใช้ `esp32dev`
 - **BEEP ON/OFF** — เสียงเตือน, **RESET PEAK**, **DONE** กลับหน้าเกจ
+- **PANEL AUTO / STD / HYB** — 3 ช่องด้านขวา: STD = COOLANT · VOLTAGE · INTAKE, HYB = COOLANT · HV BATT (% แบตไฮบริด) · HV POWER (kW, ติดลบ = ชาร์จคืน)
+  AUTO = เปลี่ยนเป็น HYB เองเมื่อรถส่งค่าแบตไฮบริดมา (เช่น OBD ของ Honda e:HEV)
+- **GEAR AUTO / OFF** — OFF ซ่อนช่องเกียร์ สำหรับรถไฮบริดหรือ CVT ที่เดาเกียร์ไม่ได้
 
 ### ความหมายของสีและสัญญาณ
 - **จุดสีบนแถบสถานะ**: เขียว = รับค่าจริงอยู่ · สีธีม = โหมดจำลอง · เหลืองกระพริบ = กำลังเชื่อมต่อ · แดง = ผิดพลาด
@@ -93,7 +96,7 @@ ls /dev/cu.*                     # หาพอร์ต (เลขเปลี�
 rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3
 {"rpm":3200,"speed":86,"coolant":87,"voltage":13.9}
 ```
-ส่งค่าไหนก็ได้ ไม่ต้องครบ ชื่อที่รองรับ: `rpm` · `spd/speed/kmh` · `clt/coolant/ect` · `v/volt/voltage/batt` · `iat/intake` · `gear` · `tps/throttle`
+ส่งค่าไหนก็ได้ ไม่ต้องครบ ชื่อที่รองรับ: `rpm` · `spd/speed/kmh` · `clt/coolant/ect` · `v/volt/voltage/batt` · `iat/intake` · `gear` · `tps/throttle` · `soc` (% แบตไฮบริด) · `kw` (kW แบตไฮบริด)
 ทดสอบจาก Mac: `~/.platformio/penv/bin/python tools/serial_feed.py /dev/cu.usbserial-XXXX`
 **ต่อจาก Arduino / บอร์ดอื่น**: ต่อ TX ของบอร์ดนั้น → **GPIO 27** ของ CYD (ช่อง CN1) + GND (ช่องรับอย่างเดียว ไม่แย่ง USB)
 มีตัวอย่าง sketch พร้อมวิธีต่อสายใน **[examples/](examples/README.md)**: `SerialSenderDemo` (ค่าทดสอบ) และ `SerialSenderSensors` (รอบ, ความเร็ว, แบต, อุณหภูมิ)
@@ -109,6 +112,10 @@ rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3
 - **ก่อนต่อ ตัดมือถือออกจาก ELM327 ก่อน** (ปิดแอป OBD หรือปิดบลูทูธมือถือ) เพราะ ELM327 รับได้ทีละเครื่อง
 - ชื่อไม่ต้องตรงเป๊ะ: เลือกเครื่องที่ชื่อมีคำว่า `OBD`, `ELM`, `V-LINK`, `VEEPEAK`, `KONNWEI`, `Vgate` … ให้อัตโนมัติ แล้วจำ MAC ไว้ บูตครั้งต่อไปต่อได้ทันทีไม่ต้องสแกน
 - อ่าน: รอบ (PID 010C), ความเร็ว (010D), น้ำหล่อเย็น (0105), ไอดี (010F), แบตเตอรี่ (ATRV)
+  และรถไฮบริด: % แบตไฮบริด (015B), กำลังแบตไฮบริด kW (019A) — อ่านเฉพาะค่าที่รถบอกว่ารองรับ
+- **รถไฮบริด เช่น Honda Civic e:HEV**: ตั้ง GEAR เป็น OFF (ไม่มีเกียร์เป็นจังหวะ) ส่วน PANEL AUTO จะสลับเป็น HV BATT / HV POWER เอง
+  ตอนวิ่งไฟฟ้าล้วนเครื่องดับ รอบจะเป็น 0 เป็นเรื่องปกติ ถ้าเร่งแล้ว HV POWER ติดลบ ให้ตั้ง `HV_CURRENT_SIGN -1` ใน `config.h`
+  Civic e:HEV ไม่ส่งค่าไอดี (010F)
 - อ่านรอบทุกๆ คำสั่งเว้นคำสั่ง เพื่อให้บาร์รอบลื่น (ได้ ~5–10 ครั้ง/วินาทีในรถ CAN ทั่วไป)
 - PID ที่รถไม่รองรับจะข้ามเอง, หลุดการเชื่อมต่อจะต่อใหม่เอง
 - ยังหาไม่เจอ: เปิด `pio device monitor` แล้วดูรายการเครื่องที่สแกนเจอ จากนั้นพิมพ์
@@ -215,6 +222,7 @@ void mySensorsRead(GaugeInput &in) {
 mode=sim | touch | serial | obd | custom
 theme=ice | lime | amber
 shift=6500        beep=on|off       peak=reset
+panels=auto | standard | hybrid      gearmode=auto | off
 obd=scan          obd=AA:BB:CC:DD:EE:FF          obdpin=1234
 bench             help              (bright=80 เฉพาะเมื่อ BACKLIGHT_DIMMING 1)
 ```
@@ -266,7 +274,7 @@ tools/
 
 ### ทดสอบ
 ```bash
-~/.platformio/penv/bin/pio test -e native     # เทส 23 ชุดบน Mac: parser, model, การวาดจอ, หน้าตั้งค่า, ตัวจำลอง, ภาพธีม
+~/.platformio/penv/bin/pio test -e native     # เทส 25 ชุดบน Mac: parser, model, การวาดจอ, หน้าตั้งค่า, ตัวจำลอง, ภาพธีม
 ```
 ทุกครั้งที่ push, GitHub Actions จะรันเทสและ build เฟิร์มแวร์ทั้ง 2 แบบให้อัตโนมัติ
 

@@ -29,6 +29,16 @@
 #define IAT_BAR_MIN         -10
 #define IAT_BAR_MAX          80
 
+// ---- Hybrid panels (SETUP -> PANELS: HYBRID, or AUTO when the car reports them) ----
+#define HYBRID_PANEL2_LABEL "HV BATT"   // state of charge, %
+#define HYBRID_PANEL3_LABEL "HV POWER"  // battery power, kW (negative = regen)
+#define SOC_LOW_WARN         15
+#define SOC_LOW_CRIT          8
+#define HVKW_BAR_MAX         60     // |kW| that fills the bar
+// OBD PID 9A battery current sign. SAE says positive = discharge; flip to -1 if HV POWER
+// reads negative while accelerating on your car.
+#define HV_CURRENT_SIGN       1
+
 // ---- Data freshness ----------------------------------------------------------
 #define DATA_STALE_MS      2500    // a value not refreshed for this long shows "--"
 #define PEAK_HOLD_MS       1500    // peak marker on the shift bar holds, then falls

@@ -287,7 +287,7 @@ static void drawPanel(int i, const char *label, bool valid, const char *value, c
     int barW = 76;
     int fill = valid ? (int)lroundf((frac < 0 ? 0 : frac > 1 ? 1 : frac) * barW) : -1;
     char key[64];
-    snprintf(key, sizeof key, "%d|%s|%06x|%d", valid, value, (unsigned)color, fill);
+    snprintf(key, sizeof key, "%s|%d|%s|%06x|%d", label, valid, value, (unsigned)color, fill);
     if (!changed(RG_P0 + i, key) || !beginRegion(panelRect(i))) return;
 
     cv.text(font_label, 230, top + 8, label, C(s_theme->accentBright), ALIGN_LEFT, 1);
@@ -383,6 +383,18 @@ void render(const GaugeView &v) {
     snprintf(buf, sizeof buf, "%d", v.coolant);
     drawPanel(0, PANEL1_LABEL, v.coolValid, buf, "°C", levelColor(v.coolLvl, C_VALUE, v.blink),
               (v.coolant - COOLANT_BAR_MIN) / (float)(COOLANT_BAR_MAX - COOLANT_BAR_MIN));
+    if (v.hybrid) {
+        snprintf(buf, sizeof buf, "%d", v.soc);
+        drawPanel(1, HYBRID_PANEL2_LABEL, v.socValid, buf, "%", levelColor(v.socLvl, s_theme->good, v.blink),
+                  v.soc / 100.0f);
+        float kw = v.kw;
+        if (fabsf(kw) < 0.05f) kw = 0;                 // no "-0.0"
+        snprintf(buf, sizeof buf, fabsf(kw) >= 100 ? "%.0f" : "%.1f", kw);
+        // regen (negative) in the theme's "good" colour, drive power in white
+        drawPanel(2, HYBRID_PANEL3_LABEL, v.kwValid, buf, "kW", kw < 0 ? s_theme->good : C_VALUE,
+                  fabsf(kw) / HVKW_BAR_MAX);
+        return;
+    }
     snprintf(buf, sizeof buf, "%.1f", v.volt);
     drawPanel(1, PANEL2_LABEL, v.voltValid, buf, "V", levelColor(v.voltLvl, s_theme->good, v.blink),
               (v.volt - VOLT_BAR_MIN) / (VOLT_BAR_MAX - VOLT_BAR_MIN));

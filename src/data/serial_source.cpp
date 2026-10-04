@@ -16,6 +16,8 @@ static const Key kKeys[] = {
     {"iat", CH_IAT}, {"intake", CH_IAT},
     {"gear", CH_GEAR},
     {"tps", CH_THROTTLE}, {"throttle", CH_THROTTLE},
+    {"soc", CH_HV_SOC}, {"hvsoc", CH_HV_SOC},
+    {"kw", CH_HV_KW}, {"hvkw", CH_HV_KW},
 };
 
 int SerialSource::feed(const char *line, bool publish) {

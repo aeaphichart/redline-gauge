@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 volatile float SimSource::touchThrottle = 0;
+volatile bool  SimSource::hybrid = false;
 
 // ---- vehicle constants ----------------------------------------------------------
 static const float kRatios[] = GEAR_RATIOS;
@@ -189,6 +190,14 @@ void SimSource::step(float dt) {
         volt_ = toward(volt_, vTarget + frand(0.04f), dt, 0.8f);
     }
 
+    // hybrid battery: motor assist under throttle, regen while braking/coasting
+    {
+        float v = speed_;
+        float target = throttle_ * (12.0f + v * 1.4f) - brake * v * 2.2f - (throttle_ < 0.05f ? v * 0.15f : 0);
+        kw_ = toward(kw_, clampf(target, -45.0f, 75.0f), dt, 0.25f);
+        soc_ = clampf(soc_ - kw_ * dt / 40.0f, 35.0f, 78.0f);       // ~1 kWh usable, sped up 4x
+    }
+
     // ---- publish at 25 Hz (roughly what a fast OBD link would give) ----
     acc_ += dt;
     if (acc_ >= 0.04f) {
@@ -202,5 +211,9 @@ void SimSource::step(float dt) {
         bus::publish(CH_VOLTAGE, volt_);
         bus::publish(CH_IAT, iat_);
         bus::publish(CH_THROTTLE, throttle_ * 100);
+        if (hybrid) {
+            bus::publish(CH_HV_SOC, soc_);
+            bus::publish(CH_HV_KW, kw_);
+        }
     }
 }

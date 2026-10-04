@@ -50,6 +50,8 @@ rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3
 | `iat` (`intake`) | °C |
 | `gear` | 0 = N, 1..n (leave out to let the gauge estimate it) |
 | `tps` (`throttle`) | % |
+| `soc` (`hvsoc`) | hybrid battery % (shown with PANEL HYB / AUTO) |
+| `kw` (`hvkw`) | hybrid battery kW, negative = regen |
 
 - JSON works too: `{"rpm":3200,"speed":86}`
 - Send only what you have. A value not refreshed for **2.5 s** shows `--`.

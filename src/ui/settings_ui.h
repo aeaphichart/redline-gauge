@@ -15,6 +15,7 @@ enum Action : uint8_t {
 
 // Source names shown on the buttons, indexed by SourceId.
 extern const char *const kSourceLabels[SRC_COUNT];
+extern const char *const kPanelLabels[PANELS_COUNT];
 
 void   draw(const Settings &s);                 // full repaint (open / after a change)
 Action tap(int x, int y, Settings &s);          // handle a tap; edits s, repaints if needed
