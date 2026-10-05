@@ -4,6 +4,11 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.6.3] - 2026-10-05
+
+### Changed
+- **REDLINE Flasher shows the birdlab.th logo**: the window icon, a header banner, and the `.exe` icon on Windows.
+
 ## [1.6.2] - 2026-10-05
 
 ### Added
