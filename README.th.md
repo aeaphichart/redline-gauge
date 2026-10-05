@@ -23,6 +23,13 @@
 
 ---
 
+## ดาวน์โหลดไฟล์พร้อมแฟลช (ไม่ต้องคอมไพล์)
+
+ไฟล์ `.bin` ของทุกเวอร์ชันอยู่ที่ **[หน้า Releases](https://github.com/moomdate/redline-gauge/releases)** มีให้ครบทุกแบบจอ
+(`invert` = ส่วนใหญ่, `noinvert` = จอสีกลับด้าน, `invert-dim` = บอร์ดที่หรี่ไฟจอได้)
+แฟลชผ่านเบราว์เซอร์ได้ที่ [esptool-js](https://espressif.github.io/esptool-js/) — ดู[วิธีเลือกไฟล์และแฟลช](docs/release-flashing.md)
+· อะไรเปลี่ยนในแต่ละเวอร์ชัน: [CHANGELOG.md](CHANGELOG.md)
+
 ## 1. แฟลชลงบอร์ด
 
 ```bash
@@ -170,6 +177,25 @@ void mySensorsRead(GaugeInput &in) {
 
 ![สัญญาณรอบผ่าน PC817](docs/wiring/wiring-rpm-opto.svg)
 
+## จับเวลา (0-100, 100-120, 120-160, 0-200)
+
+SETUP → **TIMER** (หรือพิมพ์ `timer` ทาง serial) ใช้ได้กับทุกโหมดที่มีค่าความเร็ว (OBD, SERIAL/GPS, CUSTOM, SIM)
+
+| ระหว่างวิ่ง | จบรอบ | Log |
+|---|---|---|
+| ![จับเวลา](docs/timer-run.png) | ![จบรอบ](docs/timer-finish.png) | ![log](docs/timer-log.png) |
+
+- จอดรถนิ่ง 1 วินาที บาร์จะขึ้นไฟเหลือง 3 ดวง (**STAGED**) พอออกตัวนาฬิกาเริ่มเดินเอง
+  (คำนวณย้อนหาจังหวะออกตัวจริง และคำนวณจุดผ่านแต่ละความเร็วจากค่าสองค่าที่อยู่รอบๆ)
+- ช่องขวา: **0-100**, **100-120**, **120-160** ผ่านแต่ละช่วงมีเสียงบี๊บ ตัวเลขใหญ่คือเวลาที่เดินอยู่ ถึง 200 กลายเป็นเวลา **0-200**
+  เร็วกว่าสถิติเดิมขึ้น **BEST** / **NEW BEST** สีเขียว
+- จบรอบเมื่อถึง 200 หรือความเร็วตกจากค่าสูงสุดเกิน 10 กม./ชม. (ยกเท้า/เบรก) จะ **SAVED** เท่าที่ทำได้ (ต้องผ่าน 0-100 ก่อน)
+  จอดนิ่ง 3 วินาทีพร้อมจับรอบใหม่เอง
+- **LOG**: เก็บ 20 รอบล่าสุดในบอร์ด (0-100, 100-120, 120-160, 0-200, ความเร็วสูงสุด และเก็บ 160-200 ไว้ด้วย)
+  กด **HOLD TO CLEAR** ค้าง ~1 วินาทีเพื่อล้าง · ทาง serial: `timerlog` พิมพ์เป็น CSV, `timerlog=clear` ล้าง
+- ความแม่นยำ: ความเร็วจาก OBD เป็นเลขจำนวนเต็มไม่กี่ครั้งต่อวินาที (หน้าจับเวลาจะอ่านความเร็วถี่ขึ้น) คลาดราว ±0.2 วินาที
+  ใช้ GPS 10 Hz ส่ง `spd=` ทาง SERIAL จะแม่นกว่า · ไว้ลองในสนาม ไม่ใช่บนถนนสาธารณะ
+
 ## 4. ใช้กับมอเตอร์ไซค์ (เช่น Honda Wave) ได้ไหม?
 
 **สั้นๆ: จอใช้ได้ แต่โหมด OBD BT ใช้กับ Wave ไม่ได้ — ต้องใช้โหมด CUSTOM (ต่อเซ็นเซอร์เอง)**
@@ -223,6 +249,7 @@ mode=sim | touch | serial | obd | custom
 theme=ice | lime | amber
 shift=6500        beep=on|off       peak=reset
 panels=auto | standard | hybrid      gearmode=auto | off
+timer             timerlog          timerlog=clear
 obd=scan          obd=AA:BB:CC:DD:EE:FF          obdpin=1234
 bench             help              (bright=80 เฉพาะเมื่อ BACKLIGHT_DIMMING 1)
 ```
@@ -274,7 +301,7 @@ tools/
 
 ### ทดสอบ
 ```bash
-~/.platformio/penv/bin/pio test -e native     # เทส 25 ชุดบน Mac: parser, model, การวาดจอ, หน้าตั้งค่า, ตัวจำลอง, ภาพธีม
+~/.platformio/penv/bin/pio test -e native     # เทส 29 ชุดบน Mac: parser, model, การวาดจอ, หน้าตั้งค่า, ตัวจำลอง, ภาพธีม
 ```
 ทุกครั้งที่ push, GitHub Actions จะรันเทสและ build เฟิร์มแวร์ทั้ง 2 แบบให้อัตโนมัติ
 

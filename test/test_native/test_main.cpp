@@ -19,6 +19,9 @@
 #include "assets/logo_birdlab.h"
 #include "ui/shift_slots.h"
 #include "ui/theme.h"
+#include "ui/drag_timer.h"
+#include "ui/timer_ui.h"
+#include "fonts/font_timer.h"
 #include "fonts/font_label.h"
 #include "fonts/font_rpm.h"
 #include "fonts/font_small.h"
@@ -297,6 +300,124 @@ static void test_model_hybrid_panels_and_gear_off() {
     TEST_ASSERT_EQUAL(-1, v.gear);                     // even a sent gear stays hidden
 }
 
+// ---- drag timer ------------------------------------------------------------------------------
+// Feeds a speed profile sampled every `dtMs` (rounded to whole km/h like OBD) and runs it.
+struct DragSim {
+    DragTimer t; RunLog log;
+    uint32_t ms = 50000;
+    TimerEvent feed(float kmh, uint32_t dtMs = 200, bool round = true) {
+        ms += dtMs;
+        return t.update(round ? floorf(kmh) : kmh, ms, ms, log);
+    }
+};
+
+static void test_drag_timer_constant_accel() {
+    DragSim d;
+    d.t.again();
+    for (int i = 0; i < 8; i++) d.feed(0);                          // 1.6 s stopped -> armed
+    TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
+    // launch 70 ms after the last zero sample, 10 km/h per s, then 10 km/h/s to 210
+    uint32_t launch = d.ms + 70;
+    TimerEvent last = TE_NONE;
+    int splits = 0;
+    while (d.t.state() != TS_FINISH && d.ms < launch + 40000) {
+        uint32_t next = d.ms + 200;
+        float v = next > launch ? (next - launch) / 1000.0f * 10.0f : 0;
+        last = d.feed(v);
+        if (last == TE_SPLIT) splits++;
+    }
+    TEST_ASSERT_EQUAL(TS_FINISH, d.t.state());
+    TEST_ASSERT_EQUAL(TE_FINISH, last);
+    TEST_ASSERT_EQUAL(3, splits);
+    const RunRecord &r = d.t.record();
+    TEST_ASSERT_UINT16_WITHIN(15, 1000, r.cs[SEG_0_100]);            // 10.00 s, within 0.15 s
+    TEST_ASSERT_UINT16_WITHIN(10, 200, r.cs[SEG_100_120]);
+    TEST_ASSERT_UINT16_WITHIN(10, 400, r.cs[SEG_120_160]);
+    TEST_ASSERT_UINT16_WITHIN(15, 2000, r.cs[SEG_0_200]);
+    TEST_ASSERT_UINT16_WITHIN(10, 400, r.cs[SEG_160_200]);
+    for (int s = 0; s < SEG_COUNT; s++) TEST_ASSERT_TRUE(d.t.newBest(s));   // empty log: all best
+}
+
+static void test_drag_timer_lift_and_arming() {
+    DragSim d;
+    d.t.again();
+    d.feed(30);
+    d.feed(30);
+    for (int i = 0; i < 3; i++) d.feed(0);                          // only 0.6 s stopped
+    TEST_ASSERT_EQUAL(TS_MOVING, d.t.state());
+    TEST_ASSERT_EQUAL(TE_NONE, d.feed(5));                          // moving before armed: no start
+    TEST_ASSERT_EQUAL(TS_MOVING, d.t.state());
+    for (int i = 0; i < 6; i++) d.feed(0);
+    TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
+    // run to 140, then lift: saved with 0-100 / 100-120 / 120-160? no: 160 not reached
+    float v = 0;
+    while (v < 140) { v += 3; d.feed(v); }
+    TEST_ASSERT_EQUAL(TE_SAVED, d.feed(125));
+    TEST_ASSERT_EQUAL(TS_SAVED, d.t.state());
+    TEST_ASSERT_NOT_EQUAL(RUN_NONE, d.t.record().cs[SEG_0_100]);
+    TEST_ASSERT_NOT_EQUAL(RUN_NONE, d.t.record().cs[SEG_100_120]);
+    TEST_ASSERT_EQUAL_UINT16(RUN_NONE, d.t.record().cs[SEG_120_160]);
+    TEST_ASSERT_EQUAL_UINT16(RUN_NONE, d.t.record().cs[SEG_0_200]);
+    TEST_ASSERT_EQUAL_UINT16(141, d.t.record().maxKmh);
+    // stop for 3 s: armed again
+    for (int i = 0; i < 16; i++) d.feed(0);
+    TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
+    // short run that never reaches 100: no result
+    v = 0;
+    while (v < 60) { v += 4; d.feed(v); }
+    TEST_ASSERT_EQUAL(TE_DISCARD, d.feed(40));
+    TEST_ASSERT_EQUAL(TS_NO_RESULT, d.t.state());
+    // speed data disappears mid-run: run ends
+    for (int i = 0; i < 16; i++) d.feed(0);
+    v = 0;
+    while (v < 110) { v += 5; d.feed(v); }
+    d.ms += DATA_STALE_MS + 100;
+    TEST_ASSERT_EQUAL(TE_SAVED, d.t.update(110, d.ms - DATA_STALE_MS - 100, d.ms, d.log));
+}
+
+static void test_run_log() {
+    RunLog log;
+    log.clear();
+    RunRecord r = {};
+    for (int s = 0; s < SEG_COUNT; s++) r.cs[s] = RUN_NONE;
+    TEST_ASSERT_EQUAL_UINT16(RUN_NONE, log.best(SEG_0_100));
+    for (int i = 0; i < 25; i++) { r.cs[SEG_0_100] = 900 - i; log.add(r); }
+    TEST_ASSERT_EQUAL(RunLog::kMax, log.count);
+    TEST_ASSERT_EQUAL_UINT16(25, log.runs[0].seq);                  // newest first
+    TEST_ASSERT_EQUAL_UINT16(876, log.best(SEG_0_100));
+    TEST_ASSERT_EQUAL_UINT16(RUN_NONE, log.best(SEG_0_200));
+    log.clear();
+    TEST_ASSERT_EQUAL(0, log.count);
+    log.add(r);
+    TEST_ASSERT_EQUAL_UINT16(1, log.runs[0].seq);
+}
+
+static void test_timer_ui_renders_every_state() {
+    gauge_ui::begin(push, kThemes[0]);
+    TEST_ASSERT_TRUE(fontHas(font_timer, "0123456789.-"));
+    TEST_ASSERT_TRUE(fontHas(font_label, "0-100 100-120 120-160 SPEED"));
+    DragSim d;
+    d.t.again();
+    timer_ui::invalidate();
+    timer_ui::render(d.t, d.log, d.ms, false);                      // NO SPEED
+    for (int i = 0; i < 8; i++) d.feed(0);
+    timer_ui::render(d.t, d.log, d.ms, true);                       // STAGED
+    float v = 0;
+    while (d.t.state() != TS_FINISH) {
+        v += 2.5f;
+        d.feed(v, 100, false);
+        timer_ui::render(d.t, d.log, d.ms, true);                   // RUN, every split
+    }
+    d.log.add(d.t.record());
+    timer_ui::render(d.t, d.log, d.ms, true);                       // FINISH
+    timer_ui::drawLog(d.log);
+    timer_ui::drawLog(d.log, 0.5f);
+    TEST_ASSERT_EQUAL(timer_ui::ACT_BACK, timer_ui::tapLog(280, 14));
+    TEST_ASSERT_TRUE(timer_ui::hitClear(60, 224));
+    TEST_ASSERT_EQUAL(timer_ui::ACT_AGAIN, timer_ui::tapTimer(288, 229, d.t));
+    TEST_ASSERT_EQUAL(timer_ui::ACT_LOG, timer_ui::tapTimer(230, 229, d.t));
+}
+
 static void test_gear_estimate() {
     static const float ratios[] = GEAR_RATIOS;
     for (int g = 0; g < GEAR_COUNT; g++) {
@@ -567,6 +688,10 @@ int main(int, char **) {
     RUN_TEST(test_obd_adapter_selection);
     RUN_TEST(test_obd_supported_pid_mask);
     RUN_TEST(test_obd_hybrid_pids);
+    RUN_TEST(test_drag_timer_constant_accel);
+    RUN_TEST(test_drag_timer_lift_and_arming);
+    RUN_TEST(test_run_log);
+    RUN_TEST(test_timer_ui_renders_every_state);
     RUN_TEST(test_model_hybrid_panels_and_gear_off);
     RUN_TEST(test_gear_estimate);
     RUN_TEST(test_model_levels_and_shift);

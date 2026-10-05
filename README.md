@@ -33,6 +33,13 @@ OBD-II Bluetooth, USB serial, or your own sensors.
 
 `docs/sim.gif` is a real render from the firmware code (SIM AUTO mode), produced by the host preview.
 
+## Download (no compiling)
+
+Ready-to-flash `.bin` files for every version are on the **[Releases page](https://github.com/moomdate/redline-gauge/releases)**,
+one per panel type (`invert` / `noinvert` / `invert-dim`). Flash them from the browser with
+[esptool-js](https://espressif.github.io/esptool-js/); see [which file and how](docs/release-flashing.md).
+What changed in each version: [CHANGELOG.md](CHANGELOG.md).
+
 ## Build & flash
 
 ```bash
@@ -70,7 +77,7 @@ If the splash is removed or the logo is changed, the status bar shows `UNOFFICIA
 Every value is saved in NVS and restored after a reboot.
 
 Serial commands (115200): `mode=sim|touch|serial|obd|custom` `theme=ice|lime|amber` `shift=6500`
-`beep=on|off` `peak=reset` `panels=auto|standard|hybrid` `gearmode=auto|off` `obd=scan` `obd=AA:BB:CC:DD:EE:FF` `obdpin=1234` `bench` (timing test) `help` — and `bright=80` when `BACKLIGHT_DIMMING` is 1
+`beep=on|off` `peak=reset` `panels=auto|standard|hybrid` `gearmode=auto|off` `timer` `timerlog` `timerlog=clear` `obd=scan` `obd=AA:BB:CC:DD:EE:FF` `obdpin=1234` `bench` (timing test) `help` — and `bright=80` when `BACKLIGHT_DIMMING` is 1
 
 ### Status bar
 Dot color: 🟢 live data · 🔵 simulator · 🟡 (blinking) connecting · 🔴 error.
@@ -175,6 +182,27 @@ Check the labels printed next to each connector first — the pin order differs 
 
 ![RPM pulse via PC817](docs/wiring/wiring-rpm-opto.svg)
 
+## Drag timer (0-100, 100-120, 120-160, 0-200)
+
+SETUP → **TIMER** (or `timer` over serial). Works with any source that delivers speed (OBD, SERIAL / GPS, CUSTOM, SIM).
+
+| Running | Finish | Run log |
+|---|---|---|
+| ![timer running](docs/timer-run.png) | ![timer finish](docs/timer-finish.png) | ![run log](docs/timer-log.png) |
+
+- Stop the car: after 1 s the bar shows three amber lights (**STAGED**). Drive off and the clock starts by itself.
+  The launch moment is back-estimated from the first samples, and every threshold crossing is interpolated
+  between two speed samples.
+- Splits on the right: **0-100**, **100-120**, **120-160** (a beep at each); the big number is the running clock
+  and becomes the **0-200** time at 200 km/h. Faster than your log's best = green **BEST** / **NEW BEST**.
+- The run ends at 200 km/h, or when speed drops 10 km/h under its maximum (lift / brake): it is **SAVED** with
+  whatever splits it reached (needs at least 0-100). Stop for 3 s and it re-arms for the next run.
+- **LOG**: last 20 runs (0-100, 100-120, 120-160, 0-200, max speed; 160-200 is kept too), stored on the board.
+  Hold **HOLD TO CLEAR** for ~1 s to wipe it. Over serial: `timerlog` prints CSV, `timerlog=clear`.
+- Accuracy: OBD speed is whole km/h at a few Hz (the timer screen polls speed every other request), so expect
+  about ±0.2 s. A 10 Hz GPS feeding `spd=` over SERIAL is better. For fun and comparing your own runs —
+  do it on a track, not on public roads.
+
 ## Motorcycles (e.g. Honda Wave)
 OBD BT does **not** work on Honda bikes: their 4-pin DLC speaks Honda's own K-Line protocol, not car OBD-II.
 Use **CUSTOM** instead: ignition pulse → opto → GPIO 22 (`PulseInput`, usually 1 pulse/rev on a single),
@@ -184,7 +212,7 @@ battery divider on GPIO 35, oil-temp NTC on `in.coolant` with `PANEL1_LABEL "OIL
 ## Tests
 
 ```bash
-~/.platformio/penv/bin/pio test -e native    # 25 host tests: parsers, model, renderer, settings, simulator, theme assets
+~/.platformio/penv/bin/pio test -e native    # 29 host tests: parsers, model, renderer, settings, simulator, theme assets
 ```
 CI (GitHub Actions) runs the tests and builds both firmware variants on every push.
 

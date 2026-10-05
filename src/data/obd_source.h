@@ -20,6 +20,9 @@ public:
     // Saved to NVS; safe to call from another core. Returns false if not understood.
     static bool command(const char *arg);
 
+    // Drag timer open: poll speed every other request instead of ~1 in 6.
+    static volatile bool fastSpeed;
+
 private:
     enum State : uint8_t { S_BT_START, S_CONNECT, S_INIT, S_SEARCH, S_RUN, S_WAIT };
     State    state_ = S_BT_START;

@@ -1,5 +1,5 @@
 #pragma once
-#define REDLINE_VERSION "1.0.0"
+#define REDLINE_VERSION "1.4.0"
 // ============================================================================
 //  Smart gauge configuration — everything you'd tune for a specific car lives here.
 // ============================================================================

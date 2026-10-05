@@ -27,6 +27,8 @@
 #include "ui/settings_ui.h"
 #include "ui/splash_ui.h"
 #include "ui/theme.h"
+#include "ui/drag_timer.h"
+#include "ui/timer_ui.h"
 
 static TFT_eSPI  tft;
 //                    DCS DCLK DIN DOUT  (bit-banged XPT2046, proven for this board)
@@ -102,6 +104,7 @@ static void printHelp() {
         "  mode=sim|touch|serial|obd|custom   theme=ice|lime|amber   shift=7000\n"
         "  bright=20..100   beep=on|off   peak=reset   help\n"
         "  panels=auto|standard|hybrid   gearmode=auto|off\n"
+        "  timer   timerlog   timerlog=clear\n"
         "  obd=scan | obd=AA:BB:CC:DD:EE:FF   obdpin=1234|0000 (empty = auto)\n"
         "data (SERIAL mode):  rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3\n"
         "           or JSON:  {\"rpm\":3200,\"speed\":86,\"coolant\":87,\"voltage\":13.9}\n"));
@@ -118,6 +121,9 @@ static bool keyIs(const char *p, const char *key, const char **val) {
 }
 
 static void runBench();
+static void openTimer();
+static void printRunLog();
+static void clearRunLog();
 
 static void handleLine(char *line) {
     char *p = line;
@@ -167,6 +173,16 @@ static void handleLine(char *line) {
         return;
     } else if (keyIs(p, "obd", &v)) {
         if (!ObdSource::command(v)) Serial.println("[gauge] obd=scan | obd=AA:BB:CC:DD:EE:FF | obdpin=1234");
+        return;
+    } else if (keyIs(p, "timerlog", &v)) {
+        if (!strncasecmp(v, "clear", 5)) clearRunLog();
+        else Serial.println("[gauge] timerlog | timerlog=clear");
+        return;
+    } else if (!strncasecmp(p, "timerlog", 8)) {
+        printRunLog();
+        return;
+    } else if (!strncasecmp(p, "timer", 5)) {
+        openTimer();
         return;
     } else if (!strncasecmp(p, "bench", 5)) {
         runBench();
@@ -289,8 +305,71 @@ static void updateOutputs(const GaugeView *v) {
 }
 
 // ---- screens ------------------------------------------------------------------------------------
-enum Screen { SCR_GAUGE, SCR_SETTINGS };
+enum Screen { SCR_GAUGE, SCR_SETTINGS, SCR_TIMER, SCR_LOG };
 static Screen screen = SCR_GAUGE;
+
+// ---- drag timer ---------------------------------------------------------------------------------
+static DragTimer dragTimer;
+static RunLog    runLog;
+
+static void loadRunLog() {
+    Preferences p;
+    if (!p.begin("timer", false)) return;
+    RunLog tmp;
+    if (p.getBytesLength("log") == sizeof(RunLog) && p.getBytes("log", &tmp, sizeof tmp) == sizeof tmp &&
+        tmp.version == runLog.version && tmp.count <= RunLog::kMax)
+        runLog = tmp;
+    p.end();
+}
+
+static void saveRunLog() {
+    Preferences p;
+    if (!p.begin("timer", false)) return;
+    p.putBytes("log", &runLog, sizeof runLog);
+    p.end();
+}
+
+static void printRunLog() {
+    static const char *const names[SEG_COUNT] = { "0-100", "100-120", "120-160", "0-200", "160-200" };
+    Serial.printf("run");
+    for (const char *n : names) Serial.printf(",%s", n);
+    Serial.println(",max_kmh");
+    for (int i = runLog.count - 1; i >= 0; i--) {             // oldest first, like a spreadsheet
+        const RunRecord &r = runLog.runs[i];
+        Serial.printf("%u", r.seq);
+        for (int s = 0; s < SEG_COUNT; s++)
+            if (r.cs[s] == RUN_NONE) Serial.print(",");
+            else Serial.printf(",%u.%02u", r.cs[s] / 100, r.cs[s] % 100);
+        Serial.printf(",%u\n", r.maxKmh);
+    }
+}
+
+static void clearRunLog() {
+    runLog.clear();
+    saveRunLog();
+    Serial.println("[gauge] run log cleared");
+    if (screen == SCR_LOG) timer_ui::drawLog(runLog);
+}
+
+static void openTimer() {
+    screen = SCR_TIMER;
+    SimSource::touchThrottle = 0;
+    dragTimer.again();
+    ObdSource::fastSpeed = true;
+    gauge_ui::setTheme(kThemes[settings.theme]);   // repaint the art; timer_ui draws on it
+    timer_ui::invalidate();
+}
+
+static void openRunLog() {
+    screen = SCR_LOG;
+    timer_ui::drawLog(runLog);
+}
+
+static void backToTimer() {
+    screen = SCR_TIMER;
+    gauge_ui::setTheme(kThemes[settings.theme]);
+    timer_ui::invalidate();
+}
 
 // Apply `next` over the current settings; only what actually changed is touched.
 // repaint=false when the settings page already redrew itself (tap on the page).
@@ -343,6 +422,55 @@ static void handleTouch() {
                 case settings_ui::ACT_CHANGED:    beep(2400, 15, true); applySettings(s, false); break;
                 case settings_ui::ACT_RESET_PEAK: beep(1800, 40, true); model.resetPeaks(); break;
                 case settings_ui::ACT_CLOSE:      beep(2400, 15, true); closeSettings(); break;
+                case settings_ui::ACT_TIMER:      beep(2400, 15, true); openTimer(); break;
+                default: break;
+            }
+        }
+        return;
+    }
+
+    if (screen == SCR_TIMER) {
+        if (activeSrc == SRC_SIM_TOUCH)                  // SIM TOUCH: the whole left side is the pedal
+            SimSource::touchThrottle = (pressed && sx < 215 && sy > 26 && sy < 215)
+                                       ? 0.25f + 0.75f * constrain(x, 0, 215) / 215.0f : 0.0f;
+        if (!pressed && down) {
+            down = false;
+            switch (timer_ui::tapTimer(sx, sy, dragTimer)) {
+                case timer_ui::ACT_EXIT:
+                    beep(2400, 15, true);
+                    ObdSource::fastSpeed = false;
+                    SimSource::touchThrottle = 0;
+                    closeSettings();                     // back to the gauge
+                    break;
+                case timer_ui::ACT_ABORT:
+                case timer_ui::ACT_AGAIN: beep(1800, 30, true); dragTimer.again(); break;
+                case timer_ui::ACT_LOG:   beep(2400, 15, true); openRunLog(); break;
+                default: break;
+            }
+        }
+        return;
+    }
+
+    if (screen == SCR_LOG) {
+        static uint32_t lastFill = 0;
+        bool holding = pressed && timer_ui::hitClear(sx, sy);
+        if (holding) {
+            float f = (millis() - downAt) / 1200.0f;
+            if (f >= 1 && !longDone) {
+                longDone = true;
+                beep(900, 120, true);
+                clearRunLog();
+            } else if (!longDone && millis() - lastFill > 120) {
+                lastFill = millis();
+                timer_ui::drawLog(runLog, f);
+            }
+        }
+        if (!pressed && down) {
+            down = false;
+            if (timer_ui::hitClear(sx, sy) && !longDone) timer_ui::drawLog(runLog);   // let go early
+            switch (timer_ui::tapLog(sx, sy)) {
+                case timer_ui::ACT_BACK:    beep(2400, 15, true); backToTimer(); break;
+                case timer_ui::ACT_NEW_RUN: beep(2400, 15, true); dragTimer.again(); backToTimer(); break;
                 default: break;
             }
         }
@@ -434,6 +562,7 @@ void setup() {
     ledcWriteTone(PIN_SPEAKER, 0);
 
     loadSettings();
+    loadRunLog();
 
     tft.init();
     tft.setRotation(1);
@@ -495,6 +624,30 @@ void loop() {
         gauge_ui::render(view);
         updateOutputs(&view);
         pushes += gauge_ui::lastPushedRegions();
+    } else if (screen == SCR_TIMER) {
+        switch (dragTimer.update(snap.value[CH_SPEED], snap.stamp[CH_SPEED], now, runLog)) {
+            case TE_ARMED: beep(1500, 40); break;
+            case TE_START: beep(2200, 50); break;
+            case TE_SPLIT: beep(2800, 70); break;
+            case TE_FINISH:
+            case TE_SAVED: {
+                bool best = false;
+                for (int s = 0; s < SEG_COUNT; s++) best |= dragTimer.newBest(s);
+                runLog.add(dragTimer.record());
+                saveRunLog();
+                beep(best ? 3400 : 2600, best ? 400 : 200);
+                const RunRecord &r = runLog.runs[0];
+                Serial.printf("[timer] run %u saved: 0-100 %s  0-200 %s  max %u km/h%s\n", r.seq,
+                              r.cs[SEG_0_100] == RUN_NONE ? "--" : String(r.cs[SEG_0_100] / 100.0f, 2).c_str(),
+                              r.cs[SEG_0_200] == RUN_NONE ? "--" : String(r.cs[SEG_0_200] / 100.0f, 2).c_str(),
+                              r.maxKmh, best ? "  NEW BEST" : "");
+                break;
+            }
+            case TE_DISCARD: beep(900, 150); break;
+            default: break;
+        }
+        timer_ui::render(dragTimer, runLog, now, view.speedValid);
+        updateOutputs(nullptr);
     } else {
         updateOutputs(nullptr);                      // quiet while in settings
     }

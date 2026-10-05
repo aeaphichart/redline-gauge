@@ -25,6 +25,7 @@ static void buildPinList() {
     kPins[kPinCount++] = OBD_BT_PIN;
     for (const char *p : kCommonPins) if (strcmp(p, OBD_BT_PIN)) kPins[kPinCount++] = p;
 }
+volatile bool ObdSource::fastSpeed = false;
 static volatile bool s_retarget = false;    // set by serial commands (core 1)
 static volatile bool s_forgetBond = false;  // obd=scan: also drop the pairing key
 static volatile uint32_t s_passkey = 1234;  // SSP passkey answer = the PIN being tried
@@ -383,7 +384,10 @@ void ObdSource::poll() {
     case S_RUN: {
         // next schedule entry whose PID the car actually supports
         int idx = P_RPM;
-        for (int tries = 0; tries < (int)sizeof(kSchedule); tries++) {
+        static bool speedTurn = false;
+        speedTurn = !speedTurn;
+        if (fastSpeed && speedTurn) idx = P_SPEED;          // drag timer: speed every other request
+        else for (int tries = 0; tries < (int)sizeof(kSchedule); tries++) {
             idx = kSchedule[slot_];
             slot_ = (slot_ + 1) % sizeof(kSchedule);
             if (usable(idx)) break;                        // skip PIDs this car doesn't support

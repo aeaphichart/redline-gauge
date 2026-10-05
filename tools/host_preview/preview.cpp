@@ -11,6 +11,9 @@
 #include "ui/settings_ui.h"
 #include "ui/splash_ui.h"
 #include "ui/theme.h"
+#include "ui/drag_timer.h"
+#include "ui/timer_ui.h"
+#include "config.h"
 
 extern uint32_t g_host_ms;
 static uint16_t fb[320 * 240];
@@ -64,6 +67,36 @@ static void staticFrame(const char *path, float rpm, float spd, float clt, float
     gauge_ui::invalidate();
     gauge_ui::render(view);
     save(path);
+}
+
+// Drag timer: synthetic 0 -> 205 km/h pull, saved at a few moments.
+static void timerFrames() {
+    gauge_ui::setTheme(kThemes[THEME_ICE]);
+    DragTimer t; RunLog log; log.clear();
+    RunRecord old = {};                                  // an earlier, slower run in the log
+    uint16_t oldCs[SEG_COUNT] = { 698, 181, 452, 2290, 0 };
+    for (int s = 0; s < SEG_COUNT; s++) old.cs[s] = oldCs[s];
+    old.cs[SEG_160_200] = 1200; old.maxKmh = 201;
+    log.add(old);
+    uint32_t ms = 10000;
+    t.again();
+    auto shot = [&](const char *path) { timer_ui::invalidate(); timer_ui::render(t, log, ms, true); save(path); };
+    for (int i = 0; i < 8; i++) { ms += 200; t.update(0, ms, ms, log); }
+    shot("out/timer_staged.ppm");
+    float v = 0;
+    bool s1 = false, s2 = false;
+    while (t.state() != TS_FINISH) {
+        ms += 100;
+        float a = v < 100 ? 15.5f : v < 160 ? 9.5f : 6.0f;   // km/h per s
+        v += a * 0.1f;
+        t.update(v, ms, ms, log);
+        if (!s1 && v >= 90)  { shot("out/timer_run.ppm"); s1 = true; }
+        if (!s2 && v >= 144) { shot("out/timer_run2.ppm"); s2 = true; }
+    }
+    shot("out/timer_finish.ppm");
+    log.add(t.record());
+    timer_ui::drawLog(log);
+    save("out/timer_log.ppm");
 }
 
 int main() {
@@ -136,5 +169,6 @@ int main() {
     }
     printf("frames=%ld avg pushed px/frame=%ld (%.1f%% of screen), max rpm %d, max speed %d, shift frames %d\n",
            frames, pushedPixels / frames, 100.0 * pushedPixels / frames / 76800.0, maxRpm, maxSpd, shiftFrames);
+    timerFrames();
     return 0;
 }

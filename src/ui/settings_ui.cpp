@@ -20,6 +20,7 @@ static bool inside(const Rect &r, int x, int y) {
 }
 
 static const Rect R_DONE = { 250, 4, 64, 22 };
+static const Rect R_TIMER = { 178, 4, 66, 22 };   // drag timer screen
 static Rect themeCard(int i)  { return { 8 + i * 104, 46, 96, 72 }; }
 static Rect sourceBtn(int i)  { return { 8 + i * 61, 152, 58, 22 }; }
 static const Rect R_SHIFT_DN = {   8, 194, 26, 22 };
@@ -92,7 +93,8 @@ static void compose(Canvas &cv, const Settings &s) {
     for (int i = 0; i < cv.w * cv.h; i++) cv.px[i] = blend565(215, 0, cv.px[i]);
 
     cv.text(font_ui, 12, 20, "SETTINGS", C(t.accentBright), ALIGN_LEFT, 2);
-    cv.text(font_small, 100, 19, "REDLINE v" REDLINE_VERSION " · birdlab.th", C(C_MUTED));
+    cv.text(font_small, 100, 19, "v" REDLINE_VERSION, C(C_MUTED));
+    button(cv, t, R_TIMER, "TIMER", false);
     button(cv, t, R_DONE, "DONE", true);
     for (int x = 8; x < 312; x++)                                   // accent rule fading out
         cv.blendPixel(x, 30, C(t.accent), (uint8_t)(255 - (x - 8) * 200 / 304));
@@ -139,6 +141,7 @@ void draw(const Settings &s) {
 Action tap(int x, int y, Settings &s) {
     Action a = ACT_NONE;
     if (inside(R_DONE, x, y)) return ACT_CLOSE;
+    if (inside(R_TIMER, x, y)) return ACT_TIMER;
     for (int i = 0; i < THEME_COUNT; i++) {
         Rect r = themeCard(i);
         r.h += 18;                                     // name row is tappable too

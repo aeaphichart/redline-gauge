@@ -11,6 +11,7 @@ enum Action : uint8_t {
     ACT_CHANGED,     // a setting changed — apply it (and persist)
     ACT_RESET_PEAK,
     ACT_CLOSE,       // DONE pressed — back to the gauge
+    ACT_TIMER,       // TIMER pressed — open the drag timer
 };
 
 // Source names shown on the buttons, indexed by SourceId.

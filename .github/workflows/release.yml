@@ -1,0 +1,46 @@
+name: release
+
+# Push a tag like v1.4.0 to build every panel variant and publish a GitHub release:
+#   redline-vX.Y.Z-<invert|noinvert|invert-dim>-factory.bin  (flash at 0x0)
+#   redline-vX.Y.Z-<...>-update.bin                         (flash at 0x10000, keeps settings)
+# The release notes are that version's section of CHANGELOG.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-release-${{ hashFiles('platformio.ini') }}
+      # esptool (bootloader.bin step) breaks with click >= 8.2; esptool<5 for merge_bin
+      - run: pip install platformio "click<8.2" "esptool<5"
+      - name: Check the tag matches REDLINE_VERSION
+        run: |
+          v=$(sed -n 's/^#define REDLINE_VERSION "\(.*\)"/\1/p' src/config.h)
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != REDLINE_VERSION $v"; exit 1; }
+      - name: Unit tests
+        run: pio test -e native
+      - name: Build images
+        run: PY=python tools/make_release.sh release
+      - name: Release notes from CHANGELOG.md
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          awk -v v="$v" '$0 ~ "^## \\[?"v"\\]?" {on=1; next} /^## / && on {exit} on' CHANGELOG.md > notes.md
+          cat docs/release-flashing.md >> notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          body_path: notes.md
+          files: |
+            release/redline-*.bin
+            release/SHA256SUMS-*.txt
