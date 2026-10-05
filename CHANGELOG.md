@@ -7,24 +7,28 @@ new features bump the middle number, fixes the last one.
 ## [1.6.1] - 2026-10-05
 
 ### Fixed
-- **Drag timer with SIM AUTO**: the street loop never launched from a stop at full throttle, so the timer only
-  logged long, gentle "runs". With the timer screen open, SIM AUTO now drives drag runs:
-  - It stages at a stop, launches flat out shifting at the limiter, runs past 200 km/h, then brakes and repeats.
-  - Results now look like a real hot hatch: 0-100 ≈ 6.6–7.0 s, 0-200 ≈ 23 s, a little different every run.
-- **Cruising ended a run late**: a run now also ends when speed stops climbing for 3 s. Driving off from a
-  light and cruising no longer stays "running" for a minute.
+- **Drag timer recorded nothing on the board, and the speed digits flickered.**
+  - Cause: a speed sample published by the data core could carry a timestamp a few ms *after* the UI's `now`.
+    The unsigned age check wrapped around and called it "stale", so a run was dropped right at START and the
+    speed blinked to `--` for a frame.
+  - Fix: freshness checks are now signed and `now` is read after the snapshot (gauge and timer).
+- **Less tearing on the timer screen**: the speed and clock push only the digits that changed, and the bar and
+  progress strips push only what moved.
+- **SIM AUTO with the timer open**: it now does real drag runs from a dead stop at the line. 0-100 ≈ 6.7–7.0 s,
+  0-200 ≈ 23 s, a little different every run. It goes back to the line whenever the timer opens or AGAIN /
+  NEW RUN is pressed. The simulated engine is now a 2.0 turbo (300 Nm) with a traction-limited launch.
+- A run also ends when speed stops climbing for 3 s (cruising).
 
 ### Changed (drag timer)
-- **Ready immediately**: speed 0 means READY at once. No more 1 s wait when you open the screen or after a run.
-- **The clock starts when you press the throttle** (≥ 10 %), on sources that report it (SIM, HONDA K,
-  SERIAL `tps=`). 0-100 then counts from the press. Sources without throttle, such as OBD, start on the first
-  movement as before (back-estimated).
-  - A throttle blip with no movement is a false start: back to READY, nothing logged.
-- While READY, the three panels keep showing the last run.
-
-### Changed
-- Simulator engine: a 2.0 turbo four (300 Nm plateau) with a traction-limited launch (≈0.5 g), replacing the
-  190 Nm naturally aspirated model.
+- Opening the timer shows a big flashing **READY!!**. The clock starts when the speed leaves 0.
+- Splits are **stamped** into their boxes the moment the speed is reached, with a beep and a short amber flash:
+  0-100, 100-120, 120-160 and **0-200** (new box). There are no running numbers in the boxes; the TIME row
+  is the running clock.
+  - The speed is the big number, with a "NEXT 120 KM/H" hint.
+  - While READY, the boxes keep the last run.
+- Timer sounds play even with BEEP off.
+- Run log: **CLEAR LOG → "DELETE ALL n RUNS?" → CONFIRM / CANCEL** replaces hold-to-clear.
+- Serial prints timer events (READY, START, each stamped split, saved run).
 
 ## [1.6.0] - 2026-10-05
 
