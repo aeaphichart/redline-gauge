@@ -10,8 +10,9 @@ static const int8_t kSegFrom[SEG_COUNT] = { -1, 0, 1, -1, 2 };
 static const int8_t kSegTo[SEG_COUNT]   = {  0, 1, 2,  3, 3 };
 
 static const float kStillKmh   = 1.0f;     // below this the car counts as stopped
-static const float kArmMs      = 1000;     // stopped this long -> STAGED
-static const float kRearmMs    = 3000;     // after a result: stopped this long -> next run
+static const float kArmMs      = 0;        // stopped -> ready at once
+static const float kRearmMs    = 0;        // after a result: stopped -> ready for the next run
+static const float kThrStart   = 10;       // throttle % that starts the clock (when known)
 static const float kLiftKmh    = 10;       // speed this far under the run's max ends it
 static const float kMinLogKmh  = 30;       // a run must get past this to be logged
 static const float kStallMs    = 3000;     // no new top speed for this long (cruising) ends it
@@ -115,6 +116,24 @@ TimerEvent DragTimer::end(const RunLog &log) {
     return state_ == TS_FINISH ? TE_FINISH : TE_SAVED;
 }
 
+// Throttle sample (sources that know the pedal: SIM, HONDA K, SERIAL tps=). Pressing it
+// while READY starts the clock at that exact moment, which is what "0-100 from when I hit
+// the throttle" means. Sources without throttle start on the first movement instead.
+TimerEvent DragTimer::throttle(float pct, uint32_t stamp, uint32_t now) {
+    bool fresh = stamp && now - stamp <= DATA_STALE_MS;
+    if (!fresh || stamp == lastThrStamp_) return TE_NONE;
+    lastThrStamp_ = stamp;
+    bool pressed = pct >= kThrStart, was = lastThr_ >= kThrStart;
+    lastThr_ = pct;
+    if (state_ == TS_STAGED && pressed && !was) {
+        begin(stamp);
+        start_ = stamp;
+        refined_ = true;                   // exact start, no back-estimate needed
+        return TE_START;
+    }
+    return TE_NONE;
+}
+
 TimerEvent DragTimer::update(float v, uint32_t stamp, uint32_t now, const RunLog &log) {
     bool stale = !stamp || now - stamp > DATA_STALE_MS;
     if (stale) {
@@ -168,8 +187,14 @@ TimerEvent DragTimer::update(float v, uint32_t stamp, uint32_t now, const RunLog
                 ev = TE_SPLIT;
             }
         if (v > maxV_) { maxV_ = v; maxT_ = t; }
+        bool moved = maxV_ >= kStillKmh;
         if (crossed_[3]) ev = end(log);
-        else if (v < maxV_ - kLiftKmh || v < kStillKmh || t - maxT_ >= kStallMs) ev = end(log);
+        else if (!moved && t - start_ >= kStallMs) {      // throttle blip, car never moved
+            state_ = TS_STAGED;
+            ev = TE_NONE;
+        } else if (moved && (v < maxV_ - kLiftKmh || v < kStillKmh || t - maxT_ >= kStallMs)) {
+            ev = end(log);
+        }
         break;
     }
 

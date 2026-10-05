@@ -344,11 +344,8 @@ static void test_drag_timer_lift_and_arming() {
     d.t.again();
     d.feed(30);
     d.feed(30);
-    for (int i = 0; i < 3; i++) d.feed(0);                          // only 0.6 s stopped
-    TEST_ASSERT_EQUAL(TS_MOVING, d.t.state());
-    TEST_ASSERT_EQUAL(TE_NONE, d.feed(5));                          // moving before armed: no start
-    TEST_ASSERT_EQUAL(TS_MOVING, d.t.state());
-    for (int i = 0; i < 6; i++) d.feed(0);
+    TEST_ASSERT_EQUAL(TS_MOVING, d.t.state());                      // rolling: not ready
+    TEST_ASSERT_EQUAL(TE_ARMED, d.feed(0));                         // stopped: ready at once
     TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
     // run to 140, then lift: saved with 0-100 / 100-120 / 120-160? no: 160 not reached
     float v = 0;
@@ -382,6 +379,39 @@ static void test_drag_timer_lift_and_arming() {
     while (v < 110) { v += 5; d.feed(v); }
     d.ms += DATA_STALE_MS + 100;
     TEST_ASSERT_EQUAL(TE_SAVED, d.t.update(110, d.ms - DATA_STALE_MS - 100, d.ms, d.log));
+}
+
+static void test_drag_timer_throttle_start() {
+    DragSim d;
+    d.t.again();
+    d.feed(0);
+    TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
+    // throttle pressed at t0, the car only starts moving 300 ms later: the clock runs from t0
+    d.ms += 50;
+    uint32_t t0 = d.ms;
+    TEST_ASSERT_EQUAL(TE_NONE, d.t.throttle(5, d.ms, d.ms));        // under 10 %: not a press
+    d.ms += 10;
+    t0 = d.ms;
+    TEST_ASSERT_EQUAL(TE_START, d.t.throttle(80, d.ms, d.ms));
+    TEST_ASSERT_EQUAL(TS_RUN, d.t.state());
+    d.feed(0, 100); d.feed(0, 100); d.feed(0, 100);                 // still 0 for 300 ms: run stays
+    TEST_ASSERT_EQUAL(TS_RUN, d.t.state());
+    float v = 0;                                                     // then 20 km/h/s
+    while (d.t.state() == TS_RUN && v < 140) { v += 2; d.feed(v, 100, false); }
+    for (int i = 0; i < 3; i++) d.feed(v - 20);                      // lift
+    TEST_ASSERT_EQUAL(TS_SAVED, d.t.state());
+    // 0-100 = 0.3 s standing + 5.0 s at 20 km/h/s, counted from the throttle press
+    TEST_ASSERT_UINT16_WITHIN(5, 530, d.t.record().cs[SEG_0_100]);
+    (void)t0;
+    // false start: throttle blip, car never moves -> back to READY, nothing logged
+    for (int i = 0; i < 3; i++) d.feed(0);
+    TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
+    d.ms += 10;
+    d.t.throttle(0, d.ms, d.ms);
+    d.ms += 10;
+    TEST_ASSERT_EQUAL(TE_START, d.t.throttle(60, d.ms, d.ms));
+    for (int i = 0; i < 20; i++) d.feed(0);                          // 4 s, never moves
+    TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
 }
 
 static void test_run_log() {
@@ -749,6 +779,7 @@ int main(int, char **) {
     RUN_TEST(test_honda_kline_frames);
     RUN_TEST(test_drag_timer_constant_accel);
     RUN_TEST(test_drag_timer_lift_and_arming);
+    RUN_TEST(test_drag_timer_throttle_start);
     RUN_TEST(test_run_log);
     RUN_TEST(test_timer_ui_renders_every_state);
     RUN_TEST(test_model_hybrid_panels_and_gear_off);

@@ -192,7 +192,7 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
     switch (st) {
         case TS_NO_SPEED: stateText = "NO SPEED"; stateColor = 0xff4741; break;
         case TS_MOVING:   stateText = "HOLD STILL"; stateColor = T.warning; break;
-        case TS_STAGED:   stateText = "STAGED"; stateColor = T.warning; break;
+        case TS_STAGED:   stateText = "READY"; stateColor = T.warning; break;
         case TS_RUN:      stateText = "RUN"; stateColor = T.good; break;
         case TS_FINISH:   stateText = "FINISH"; stateColor = T.good; break;
         case TS_SAVED:    stateText = "SAVED"; stateColor = T.good; break;
@@ -223,8 +223,8 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
     } else {
         snprintf(num, sizeof num, "0.00");
         bigColor = C_DIM;
-        snprintf(label, sizeof label, st == TS_STAGED ? "LAUNCH TO START" : st == TS_MOVING ? "STOP THE CAR TO ARM"
-                                                                            : "WAITING FOR SPEED");
+        snprintf(label, sizeof label, st == TS_STAGED ? "HIT THROTTLE" : st == TS_MOVING ? "STOP TO ARM"
+                                                                            : "NO SPEED YET");
         uint16_t b200 = log.best(SEG_0_200), b100 = log.best(SEG_0_100);
         if (b200 != RUN_NONE) snprintf(right, sizeof right, "BEST 0-200 %u.%02u", b200 / 100, b200 % 100);
         else if (b100 != RUN_NONE) snprintf(right, sizeof right, "BEST 0-100 %u.%02u", b100 / 100, b100 % 100);
@@ -251,6 +251,9 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
         if (showing) {
             if (t.segDone(s)) { ps = t.newBest(s) ? PS_BEST : PS_DONE; tm = t.segTime(s, now); }
             else if (t.segActive(s)) { ps = PS_ACTIVE; tm = t.segTime(s, now); }
+        } else if (log.count && log.runs[0].cs[s] != RUN_NONE) {
+            ps = PS_DONE;                                  // ready: keep the last run on screen
+            tm = log.runs[0].cs[s] / 100.0f;
         }
         fmtSec(num, sizeof num, tm);
         drawPanel(i, kPanelLbl[i], num, ps, showing ? t.segProgress(s) : 0);

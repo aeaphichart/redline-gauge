@@ -195,9 +195,11 @@ SETUP → **TIMER** (or `timer` over serial). Works with any source that deliver
 |---|---|---|
 | ![timer running](docs/timer-run.png) | ![timer finish](docs/timer-finish.png) | ![run log](docs/timer-log.png) |
 
-- Stop the car: after 1 s the bar shows three amber lights (**STAGED**). Drive off and the clock starts by itself.
-  The launch moment is back-estimated from the first samples, and every threshold crossing is interpolated
-  between two speed samples.
+- Stop the car: the bar shows three amber lights (**READY**) right away.
+  - With a throttle signal (SIM, HONDA K, SERIAL `tps=`), the clock starts the moment you press the throttle.
+  - Otherwise (OBD), it starts on the first movement, back-estimated from the first samples.
+  - Every threshold crossing is interpolated between two speed samples.
+  - While READY, the panels keep showing the last run.
 - Splits on the right: **0-100**, **100-120**, **120-160** (a beep at each); the big number is the running clock
   and becomes the **0-200** time at 200 km/h. Faster than your log's best = green **BEST** / **NEW BEST**.
 - The run ends at 200 km/h, or when speed drops 10 km/h under its maximum (lift / brake). Every run past

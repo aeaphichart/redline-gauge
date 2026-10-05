@@ -14,6 +14,14 @@ new features bump the middle number, fixes the last one.
 - **Cruising ended a run late**: a run now also ends when speed stops climbing for 3 s. Driving off from a
   light and cruising no longer stays "running" for a minute.
 
+### Changed (drag timer)
+- **Ready immediately**: speed 0 means READY at once. No more 1 s wait when you open the screen or after a run.
+- **The clock starts when you press the throttle** (≥ 10 %), on sources that report it (SIM, HONDA K,
+  SERIAL `tps=`). 0-100 then counts from the press. Sources without throttle, such as OBD, start on the first
+  movement as before (back-estimated).
+  - A throttle blip with no movement is a false start: back to READY, nothing logged.
+- While READY, the three panels keep showing the last run.
+
 ### Changed
 - Simulator engine: a 2.0 turbo four (300 Nm plateau) with a traction-limited launch (≈0.5 g), replacing the
   190 Nm naturally aspirated model.

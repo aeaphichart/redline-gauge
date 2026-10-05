@@ -3,15 +3,16 @@
 // (160-200 is kept for the log too). No drawing and no hardware here: it is fed the raw
 // speed samples (value + the time they were published) and runs identically on the host.
 //
-//   wait  -> car stopped for 1 s           -> STAGED
-//   STAGED -> speed leaves 0               -> RUN (start time back-estimated from the
-//                                             first two moving samples)
+//   wait  -> car stopped                   -> STAGED ("READY")
+//   STAGED -> throttle pressed (if the source reports it), else speed leaves 0
+//                                          -> RUN (throttle: exact start; speed: start
+//                                             back-estimated from the first two samples)
 //   RUN   -> 200 km/h                      -> FINISH
 //   RUN   -> speed drops 10 below its max, or no new top speed for 3 s (cruising)
 //                                          -> SAVED with whatever it reached (top speed +
 //                                             time to it, and every split passed); runs that
 //                                             never got past 30 km/h are not logged
-//   result -> stopped for 3 s, or again()  -> STAGED for the next run
+//   result -> stopped, or again()          -> STAGED for the next run
 // Each threshold crossing is interpolated between the two samples around it, so the
 // times are better than the sample rate (OBD speed is integer km/h at ~5-10 Hz).
 #include <stdint.h>
@@ -50,6 +51,8 @@ public:
     void again();                               // drop any result, wait for a stop
     // Call every frame with the newest speed sample (stamp 0 = no data yet).
     TimerEvent update(float kmh, uint32_t stamp, uint32_t now, const RunLog &log);
+    // Optional: the throttle channel. While READY, pressing it (>= 10 %) starts the clock.
+    TimerEvent throttle(float pct, uint32_t stamp, uint32_t now);
 
     TimerState state() const { return state_; }
     bool  running() const { return state_ == TS_RUN; }
@@ -67,7 +70,8 @@ public:
 
 private:
     TimerState state_ = TS_NO_SPEED;
-    uint32_t lastStamp_ = 0;
+    uint32_t lastStamp_ = 0, lastThrStamp_ = 0;
+    float    lastThr_ = 0;
     double   lastT_ = 0;                        // ms of the previous sample
     float    lastV_ = 0;
     double   stillSince_ = -1;                  // ms the car has been stopped since, -1 = moving
