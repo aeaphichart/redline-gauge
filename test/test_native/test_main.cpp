@@ -23,6 +23,7 @@
 #include "ui/drag_timer.h"
 #include "ui/timer_ui.h"
 #include "fonts/font_timer.h"
+#include "fonts/font_ready.h"
 #include "fonts/font_label.h"
 #include "fonts/font_rpm.h"
 #include "fonts/font_small.h"
@@ -450,9 +451,15 @@ static void test_timer_ui_renders_every_state() {
     d.log.add(d.t.record());
     timer_ui::render(d.t, d.log, d.ms, true);                       // FINISH
     timer_ui::drawLog(d.log);
-    timer_ui::drawLog(d.log, 0.5f);
+    TEST_ASSERT_TRUE(fontHas(font_ready, "READY!!"));
     TEST_ASSERT_EQUAL(timer_ui::ACT_BACK, timer_ui::tapLog(280, 14));
-    TEST_ASSERT_TRUE(timer_ui::hitClear(60, 224));
+    // clearing needs CLEAR then CONFIRM; CANCEL backs out
+    TEST_ASSERT_EQUAL(timer_ui::ACT_CLEAR_ASK, timer_ui::tapLog(60, 224));
+    timer_ui::drawLog(d.log);
+    TEST_ASSERT_EQUAL(timer_ui::ACT_CANCEL, timer_ui::tapLog(238, 224));
+    TEST_ASSERT_EQUAL(timer_ui::ACT_CLEAR_ASK, timer_ui::tapLog(60, 224));
+    TEST_ASSERT_EQUAL(timer_ui::ACT_CLEAR, timer_ui::tapLog(60, 224));
+    TEST_ASSERT_EQUAL(timer_ui::ACT_NEW_RUN, timer_ui::tapLog(238, 224));
     TEST_ASSERT_EQUAL(timer_ui::ACT_AGAIN, timer_ui::tapTimer(288, 229, d.t));
     TEST_ASSERT_EQUAL(timer_ui::ACT_LOG, timer_ui::tapTimer(230, 229, d.t));
 }

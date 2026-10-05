@@ -7,6 +7,7 @@
 volatile float SimSource::touchThrottle = 0;
 volatile bool  SimSource::hybrid = false;
 volatile bool  SimSource::dragMode = false;
+volatile bool  SimSource::restartDrag = false;
 
 // ---- vehicle constants ----------------------------------------------------------
 static const float kRatios[] = GEAR_RATIOS;
@@ -53,7 +54,8 @@ static const Phase kDrag[] = {
 static const int kDragPhases = sizeof(kDrag) / sizeof(kDrag[0]);
 
 void SimSource::script(float dt, float &thr, float &brake, float &shiftAt) {
-    if (dragMode != inDrag_) {              // switch scripts
+    if (dragMode != inDrag_ || (dragMode && restartDrag)) {   // switch scripts / timer re-opened
+        restartDrag = false;
         inDrag_ = dragMode;
         phase_ = inDrag_ ? 0 : 1;
         phaseT_ = 0;

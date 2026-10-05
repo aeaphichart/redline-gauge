@@ -82,6 +82,7 @@ static void timerFrames() {
     t.again();
     auto shot = [&](const char *path) { timer_ui::invalidate(); timer_ui::render(t, log, ms, true); save(path); };
     for (int i = 0; i < 8; i++) { ms += 200; t.update(0, ms, ms, log); }
+    ms += 600;                                           // READY!! blink phase: on
     shot("out/timer_staged.ppm");
     float v = 0;
     bool s1 = false, s2 = false;

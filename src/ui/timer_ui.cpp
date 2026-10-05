@@ -6,6 +6,7 @@
 #include "ui/theme.h"
 #include "config.h"
 #include "fonts/font_timer.h"
+#include "fonts/font_ready.h"
 #include "fonts/font_speed.h"
 #include "fonts/font_value.h"
 #include "fonts/font_label.h"
@@ -129,8 +130,18 @@ static void drawBig(const char *label, const char *right, const char *tag, const
     char key[72];
     snprintf(key, sizeof key, "%s|%s|%s", label, right, tag);
     if (changed(RG_LBL, key) && begin(R_BIG_LBL)) { paint(); flush(); }
+    if (!num[0]) return;                               // READY!! owns the big region
     snprintf(key, sizeof key, "%s|%06x", num, (unsigned)color);
     if (changed(RG_BIG, key) && begin(R_BIG)) { paint(); flush(); }
+}
+
+// READY: big flashing "READY!!" where the speed goes once the car moves.
+static void drawReady(bool on) {
+    char key[72];
+    snprintf(key, sizeof key, "READY|%d", on);
+    if (!changed(RG_BIG, key) || !begin(R_BIG)) return;
+    if (on) cv().text(font_ready, 112, 118, "READY!!", C(th().warning), ALIGN_CENTER, 1);
+    flush();
 }
 
 // Bottom row: the clock (running time, or the result).
@@ -253,7 +264,13 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
         if (b200 != RUN_NONE) snprintf(right, sizeof right, "BEST 0-200 %u.%02u", b200 / 100, b200 % 100);
         else if (b100 != RUN_NONE) snprintf(right, sizeof right, "BEST 0-100 %u.%02u", b100 / 100, b100 % 100);
     }
-    drawBig(label, right, tag, num, kmh >= 0 ? 0xffffff : C_DIM, "KM/H");
+    if (st == TS_STAGED) {
+        snprintf(label, sizeof label, "LAUNCH TO START");
+        drawBig(label, right, tag, "", 0, "");                 // label row only
+        drawReady(((now / 400) & 1) == 0);
+    } else {
+        drawBig(label, right, tag, num, kmh >= 0 ? 0xffffff : C_DIM, "KM/H");
+    }
     drawTime(tlabel, tnum, tColor);
 
     // bar: staging lights, live speed toward 200, or the result
@@ -274,7 +291,7 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
         float tm = -1;
         if (showing) {
             if (t.segDone(s)) { ps = t.newBest(s) ? PS_BEST : PS_DONE; tm = t.segTime(s, now); }
-            else if (t.segActive(s)) { ps = PS_ACTIVE; tm = t.segTime(s, now); }
+            else if (t.segActive(s)) ps = PS_ACTIVE;       // target being chased: stamped when reached
         } else if (log.count && log.runs[0].cs[s] != RUN_NONE) {
             ps = PS_DONE;                                  // ready: keep the last run on screen
             tm = log.runs[0].cs[s] / 100.0f;
@@ -287,7 +304,7 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
         float tm = -1;
         if (showing) {
             if (t.segDone(SEG_0_200)) { ps = t.newBest(SEG_0_200) ? PS_BEST : PS_DONE; tm = t.segTime(SEG_0_200, now); }
-            else if (t.segActive(SEG_0_200)) { ps = PS_ACTIVE; tm = t.segTime(SEG_0_200, now); }
+            else if (t.segActive(SEG_0_200)) ps = PS_ACTIVE;
         } else if (log.count && log.runs[0].cs[SEG_0_200] != RUN_NONE) {
             ps = PS_DONE;
             tm = log.runs[0].cs[SEG_0_200] / 100.0f;
@@ -322,7 +339,9 @@ static void button(const Rect &r, const char *label, uint32_t edge, bool hot, fl
     c.text(font_ui, r.x + r.w / 2, r.y + (r.h + font_ui.ascent) / 2, label, C(hot ? edge : C_STATUS), ALIGN_CENTER, 1);
 }
 
-static void composeLog(const RunLog &log, float clearHold) {
+static bool s_confirm = false;             // CLEAR tapped: waiting for CONFIRM / CANCEL
+
+static void composeLog(const RunLog &log) {
     const Theme &T = th();
     Canvas &c = cv();
     for (int i = 0; i < c.w * c.h; i++) c.px[i] = blend565(215, 0, c.px[i]);
@@ -366,25 +385,34 @@ static void composeLog(const RunLog &log, float clearHold) {
             c.text(font_small, cx[k + 1], 199, buf, C(T.good));
         }
     }
-    button(L_CLEAR, clearHold > 0 ? "KEEP HOLDING" : "HOLD TO CLEAR", 0xff2e2e, clearHold > 0, clearHold);
-    button(L_NEW, "NEW RUN", T.accent, true);
+    if (s_confirm) {
+        button(L_CLEAR, "CONFIRM CLEAR", 0xff2e2e, true, 1.0f);
+        button(L_NEW, "CANCEL", T.accent, true);
+    } else {
+        button(L_CLEAR, "CLEAR LOG", 0xff2e2e, false);
+        button(L_NEW, "NEW RUN", T.accent, true);
+    }
 }
 
-void drawLog(const RunLog &log, float clearHold) {
+void drawLog(const RunLog &log) {
     Canvas &c = cv();
     for (int y = 0; y < 240; y += 40) {
         c.begin(0, y, 320, 40, th().background);
-        composeLog(log, clearHold);
+        composeLog(log);
         gauge_ui::pushFn()(0, y, 320, 40, c.px);
     }
 }
 
 Action tapLog(int x, int y) {
-    if (inside(L_BACK, x, y)) return ACT_BACK;
+    if (inside(L_BACK, x, y)) { s_confirm = false; return ACT_BACK; }
+    if (s_confirm) {
+        if (inside(L_CLEAR, x, y)) { s_confirm = false; return ACT_CLEAR; }
+        if (inside(L_NEW, x, y))   { s_confirm = false; return ACT_CANCEL; }
+        return ACT_NONE;
+    }
+    if (inside(L_CLEAR, x, y)) { s_confirm = true; return ACT_CLEAR_ASK; }
     if (inside(L_NEW, x, y)) return ACT_NEW_RUN;
     return ACT_NONE;
 }
-
-bool hitClear(int x, int y) { return inside(L_CLEAR, x, y); }
 
 }  // namespace timer_ui

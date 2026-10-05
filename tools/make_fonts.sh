@@ -15,4 +15,5 @@ ASCII=$(printf '%s' ' !"#$%&'"'"'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUV
 "$PY" gen_font.py $F/IBMPlexMono-SemiBold.ttf        9 font_small "${ASCII}°·"              $O/font_small.h
 "$PY" gen_font.py $F/BarlowCondensed-ExtraBold.ttf  16 font_ui    " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789%+-/.,:<>" $O/font_ui.h
 "$PY" gen_font.py $F/BarlowCondensed-Black.ttf      58 font_timer "0123456789.-"            $O/font_timer.h
+"$PY" gen_font.py $F/BarlowCondensed-BlackItalic.ttf 50 font_ready "READY!GO"              $O/font_ready.h
 "$PY" gen_font.py $F/BarlowCondensed-BlackItalic.ttf 54 font_title "REDLIN" $O/font_title.h

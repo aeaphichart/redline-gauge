@@ -389,6 +389,7 @@ static void openTimer() {
     dragTimer.again();
     ObdSource::fastSpeed = true;
     SimSource::dragMode = true;                    // SIM AUTO drives launches from a stop
+    SimSource::restartDrag = true;                 // … starting at the line, even if it was mid-run
     gauge_ui::setTheme(kThemes[settings.theme]);   // repaint the art; timer_ui draws on it
     timer_ui::invalidate();
 }
@@ -477,7 +478,7 @@ static void handleTouch() {
                     closeSettings();                     // back to the gauge
                     break;
                 case timer_ui::ACT_ABORT:
-                case timer_ui::ACT_AGAIN: click(1800, 30); dragTimer.again(); break;
+                case timer_ui::ACT_AGAIN: click(1800, 30); dragTimer.again(); SimSource::restartDrag = true; break;
                 case timer_ui::ACT_LOG:   click(); openRunLog(); break;
                 default: break;
             }
@@ -486,25 +487,14 @@ static void handleTouch() {
     }
 
     if (screen == SCR_LOG) {
-        static uint32_t lastFill = 0;
-        bool holding = pressed && timer_ui::hitClear(sx, sy);
-        if (holding) {
-            float f = (millis() - downAt) / 1200.0f;
-            if (f >= 1 && !longDone) {
-                longDone = true;
-                click(900, 120);
-                clearRunLog();
-            } else if (!longDone && millis() - lastFill > 120) {
-                lastFill = millis();
-                timer_ui::drawLog(runLog, f);
-            }
-        }
         if (!pressed && down) {
             down = false;
-            if (timer_ui::hitClear(sx, sy) && !longDone) timer_ui::drawLog(runLog);   // let go early
             switch (timer_ui::tapLog(sx, sy)) {
-                case timer_ui::ACT_BACK:    click(); backToTimer(); break;
-                case timer_ui::ACT_NEW_RUN: click(); dragTimer.again(); backToTimer(); break;
+                case timer_ui::ACT_BACK:      click(); backToTimer(); break;
+                case timer_ui::ACT_NEW_RUN:   click(); dragTimer.again(); SimSource::restartDrag = true; backToTimer(); break;
+                case timer_ui::ACT_CLEAR_ASK: click(); timer_ui::drawLog(runLog); break;   // shows CONFIRM / CANCEL
+                case timer_ui::ACT_CANCEL:    click(); timer_ui::drawLog(runLog); break;
+                case timer_ui::ACT_CLEAR:     click(900, 120); clearRunLog(); break;       // redraws
                 default: break;
             }
         }
@@ -659,9 +649,9 @@ void loop() {
         pushes += gauge_ui::lastPushedRegions();
     } else if (screen == SCR_TIMER) {
         switch (dragTimer.update(snap.value[CH_SPEED], snap.stamp[CH_SPEED], now, runLog)) {
-            case TE_ARMED: beep(1500, 40); break;
-            case TE_START: beep(2200, 50); break;
-            case TE_SPLIT: beep(2800, 70); break;
+            case TE_ARMED: beep(1500, 40); Serial.println("[timer] READY"); break;
+            case TE_START: beep(2200, 50); Serial.printf("[timer] START at %.1f km/h\n", snap.value[CH_SPEED]); break;
+            case TE_SPLIT: beep(2800, 70); Serial.printf("[timer] split at %.1f km/h, %.2f s\n", snap.value[CH_SPEED], dragTimer.elapsed(now)); break;
             case TE_FINISH:
             case TE_SAVED: {
                 bool best = false;
@@ -677,7 +667,7 @@ void loop() {
                               best ? "  NEW BEST" : "");
                 break;
             }
-            case TE_DISCARD: beep(900, 150); break;
+            case TE_DISCARD: beep(900, 150); Serial.printf("[timer] run discarded (top %.0f km/h)\n", dragTimer.maxKmh()); break;
             default: break;
         }
         timer_ui::render(dragTimer, runLog, now, view.speedValid);

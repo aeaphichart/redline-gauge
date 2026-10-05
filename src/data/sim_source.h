@@ -19,6 +19,7 @@ public:
     static volatile bool hybrid;
     // AUTO mode drives drag runs instead of the street loop (set while the timer is open).
     static volatile bool dragMode;
+    static volatile bool restartDrag;   // timer (re)opened / AGAIN: put the car back at the line
 
     // Advance the model by dt seconds (public for the host preview).
     void step(float dt);
