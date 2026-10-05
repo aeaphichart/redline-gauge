@@ -17,6 +17,8 @@ public:
     static volatile float touchThrottle;
     // Also publish hybrid battery SOC / kW (set from main when PANELS = HYBRID).
     static volatile bool hybrid;
+    // AUTO mode drives drag runs instead of the street loop (set while the timer is open).
+    static volatile bool dragMode;
 
     // Advance the model by dt seconds (public for the host preview).
     void step(float dt);
@@ -41,6 +43,9 @@ private:
 
     // script (AUTO)
     int   phase_ = 0;
+    bool  inDrag_ = false;
+    float grip_ = 1.0f;          // per-run traction variation
+    float power_ = 1.0f;         // per-run power variation
     float phaseT_ = 0;
 
     float engineTorque(float rpm) const;

@@ -388,6 +388,7 @@ static void openTimer() {
     SimSource::touchThrottle = 0;
     dragTimer.again();
     ObdSource::fastSpeed = true;
+    SimSource::dragMode = true;                    // SIM AUTO drives launches from a stop
     gauge_ui::setTheme(kThemes[settings.theme]);   // repaint the art; timer_ui draws on it
     timer_ui::invalidate();
 }
@@ -471,6 +472,7 @@ static void handleTouch() {
                 case timer_ui::ACT_EXIT:
                     click();
                     ObdSource::fastSpeed = false;
+                    SimSource::dragMode = false;
                     SimSource::touchThrottle = 0;
                     closeSettings();                     // back to the gauge
                     break;

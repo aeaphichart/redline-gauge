@@ -6,6 +6,7 @@
 
 volatile float SimSource::touchThrottle = 0;
 volatile bool  SimSource::hybrid = false;
+volatile bool  SimSource::dragMode = false;
 
 // ---- vehicle constants ----------------------------------------------------------
 static const float kRatios[] = GEAR_RATIOS;
@@ -13,6 +14,7 @@ static const int   kGears = sizeof(kRatios) / sizeof(kRatios[0]);
 static const float kMass = 1250.0f * 1.08f;               // kg, incl. rotating inertia
 static const float kWheelR = TIRE_CIRCUMFERENCE_M / (2.0f * 3.14159265f);
 static const float kLimiter = RPM_MAX - 300;
+static const float kTraction = 6200.0f;                    // N, max drive force at the tyres
 
 static float frand(float a) { return ((rand() & 0xFFFF) / 32767.5f - 1.0f) * a; }
 static float clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ? hi : v; }
@@ -40,8 +42,25 @@ static const Phase kScript[] = {
 };
 static const int kPhases = sizeof(kScript) / sizeof(kScript[0]);
 
+// Drag timer screen open: stage at a stop, launch flat out shifting at the limiter, run
+// past 200 km/h (the timer's last split), lift, brake to a stop, repeat.
+static const Phase kDrag[] = {
+    { P_IDLE,     0, 0.00f,         0,  4 },   // staged: the timer arms after 1 s still
+    { P_ACCEL,  205, 1.00f, RPM_MAX - 350, 40 },
+    { P_BRAKE,    0, 0.70f,         0, 25 },
+};
+static const int kDragPhases = sizeof(kDrag) / sizeof(kDrag[0]);
+
 void SimSource::script(float dt, float &thr, float &brake, float &shiftAt) {
-    const Phase &p = kScript[phase_];
+    if (dragMode != inDrag_) {              // switch scripts at the next phase start
+        inDrag_ = dragMode;
+        phase_ = inDrag_ ? 0 : 1;
+        phaseT_ = 0;
+    }
+    const Phase *list = inDrag_ ? kDrag : kScript;
+    int count = inDrag_ ? kDragPhases : kPhases;
+    if (phase_ >= count) phase_ = 0;
+    const Phase &p = list[phase_];
     float kmh = speed_ * 3.6f;
     bool done = false;
     phaseT_ += dt;
@@ -55,22 +74,27 @@ void SimSource::script(float dt, float &thr, float &brake, float &shiftAt) {
         case P_BRAKE:  brake = p.throttle; done = kmh <= p.targetKmh + 0.5f; break;
     }
     if (done || phaseT_ > p.maxTime + 20) {
-        phase_ = (phase_ + 1) % kPhases;
-        if (phase_ == 0) phase_ = 1;       // the start-up idle only runs once
+        phase_ = (phase_ + 1) % count;
+        if (phase_ == 0 && !inDrag_) phase_ = 1;   // the start-up idle only runs once
+        grip_ = 1.0f + frand(0.04f);               // every launch a little different
+        power_ = 1.0f + frand(0.025f);             // (heat soak, air temperature …)
         phaseT_ = 0;
     }
 }
 
 // ---- engine ----------------------------------------------------------------------------
 float SimSource::engineTorque(float rpm) const {
-    // ~190 Nm peak at 4500 rpm, falls off both sides — a lively 2.0 NA four.
-    float x = (rpm - 4500.0f) / 5200.0f;
-    return clampf(190.0f * (1.0f - x * x), 60.0f, 190.0f);
+    // A 2.0 turbo four (~210 hp): boost builds to a 300 Nm plateau from 2500 to 5000 rpm,
+    // then tails off to ~230 Nm at the limiter. Traction-limited launch: 0-100 in ~6.5 s.
+    if (rpm < 2500) return 150.0f + (rpm - 1000.0f) * 0.10f;
+    if (rpm < 5000) return 300.0f;
+    return 300.0f - (rpm - 5000.0f) * 0.04f;
 }
 
 void SimSource::begin() {
     speed_ = 0; gear_ = 0; throttle_ = 0; shiftTimer_ = 0; launching_ = false;
     rpm_ = 0; phase_ = 0; phaseT_ = -1.6f;                  // negative = cranking
+    inDrag_ = false;
     coolant_ = 38; iat_ = ambient_ + 2; volt_ = 12.5f;
     acc_ = 0;
     lastMs_ = bus::nowMs();
@@ -157,9 +181,11 @@ void SimSource::step(float dt) {
             engineRpm = fmaxf(matched, launchRpm);
             if (matched >= launchRpm * 0.97f) launching_ = false;
         }
-        float tq = rpm_ >= kLimiter ? 0 : engineTorque(engineRpm) * throttle_;
+        float tq = rpm_ >= kLimiter ? 0 : engineTorque(engineRpm) * throttle_ * power_;
         tq -= (1.0f - throttle_) * (12.0f + engineRpm * 0.006f);   // engine braking
         drive = tq * ratio * 0.9f / kWheelR;
+        // front tyres can only push so hard: ~0.5 g, so 1st gear spins rather than rockets
+        if (drive > kTraction * grip_) drive = kTraction * grip_;
         rpm_ = toward(rpm_, fmaxf(engineRpm, launching_ ? engineRpm : idle * 0.9f), dt, 0.05f);
         if (rpm_ >= kLimiter) rpm_ = kLimiter - 40 - frand(30);      // bounce off the limiter
     } else {

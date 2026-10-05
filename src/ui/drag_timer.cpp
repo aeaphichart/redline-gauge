@@ -14,6 +14,7 @@ static const float kArmMs      = 1000;     // stopped this long -> STAGED
 static const float kRearmMs    = 3000;     // after a result: stopped this long -> next run
 static const float kLiftKmh    = 10;       // speed this far under the run's max ends it
 static const float kMinLogKmh  = 30;       // a run must get past this to be logged
+static const float kStallMs    = 3000;     // no new top speed for this long (cruising) ends it
 
 // ---- log -------------------------------------------------------------------------------
 void RunLog::add(RunRecord r) {
@@ -50,6 +51,7 @@ void DragTimer::begin(double t) {
     start_ = zeroT_;                       // provisional: the last standstill sample
     firstT_ = t;
     firstV_ = 0;
+    maxT_ = t;
     refined_ = false;
     memset(crossed_, 0, sizeof crossed_);
     memset(newBest_, 0, sizeof newBest_);
@@ -167,7 +169,7 @@ TimerEvent DragTimer::update(float v, uint32_t stamp, uint32_t now, const RunLog
             }
         if (v > maxV_) { maxV_ = v; maxT_ = t; }
         if (crossed_[3]) ev = end(log);
-        else if (v < maxV_ - kLiftKmh || v < kStillKmh) ev = end(log);
+        else if (v < maxV_ - kLiftKmh || v < kStillKmh || t - maxT_ >= kStallMs) ev = end(log);
         break;
     }
 

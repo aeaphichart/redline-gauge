@@ -4,6 +4,20 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.6.1] - 2026-10-05
+
+### Fixed
+- **Drag timer with SIM AUTO**: the street loop never launched from a stop at full throttle, so the timer only
+  logged long, gentle "runs". With the timer screen open, SIM AUTO now drives drag runs:
+  - It stages at a stop, launches flat out shifting at the limiter, runs past 200 km/h, then brakes and repeats.
+  - Results now look like a real hot hatch: 0-100 ≈ 6.6–7.0 s, 0-200 ≈ 23 s, a little different every run.
+- **Cruising ended a run late**: a run now also ends when speed stops climbing for 3 s. Driving off from a
+  light and cruising no longer stays "running" for a minute.
+
+### Changed
+- Simulator engine: a 2.0 turbo four (300 Nm plateau) with a traction-limited launch (≈0.5 g), replacing the
+  190 Nm naturally aspirated model.
+
 ## [1.6.0] - 2026-10-05
 
 ### Added

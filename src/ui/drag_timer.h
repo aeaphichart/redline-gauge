@@ -7,7 +7,8 @@
 //   STAGED -> speed leaves 0               -> RUN (start time back-estimated from the
 //                                             first two moving samples)
 //   RUN   -> 200 km/h                      -> FINISH
-//   RUN   -> speed drops 10 below its max  -> SAVED with whatever it reached (top speed +
+//   RUN   -> speed drops 10 below its max, or no new top speed for 3 s (cruising)
+//                                          -> SAVED with whatever it reached (top speed +
 //                                             time to it, and every split passed); runs that
 //                                             never got past 30 km/h are not logged
 //   result -> stopped for 3 s, or again()  -> STAGED for the next run
