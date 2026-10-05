@@ -256,8 +256,8 @@ tools/
   and the RPM / speed numbers (tabular digits) send just the digit cells that changed. The whole region is still
   painted and clipped, so the result is pixel-identical to a full repaint — a host test checks that on every frame
   of a full sweep.
-- SPI runs at 40 MHz (80 MHz garbled the picture now and then while Bluetooth started or stopped). 60 fps holds at 40 MHz.
-- Measured on the CYD with `bench` (serial command, fixed 0 → 8000 → 0 sweep): **8.7 ms per frame, 115 fps possible** (at 40 MHz SPI)
+- SPI runs at 80 MHz on the full-backlight builds and 40 MHz on the `-dim` builds. 80 MHz plus a PWM-dimmed backlight sometimes garbled the picture while Bluetooth started or stopped. Both run 60 fps.
+- Measured on the CYD with `bench` (serial command, fixed 0 → 8000 → 0 sweep): **7.9 ms per frame, 126 fps possible** at 80 MHz SPI (8.7 ms / 115 fps at 40 MHz)
   (was 23.6 ms / 42 fps), 11.7 KB pushed per frame (was 44 KB). The UI runs capped at 60 fps (`UI_FPS`).
 - Fonts are anti-aliased and blended against the *actual background pixels*
   (TFT_eSPI smooth fonts blend against a single color, which leaves edge halos on an image background).

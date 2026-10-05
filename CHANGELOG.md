@@ -4,6 +4,16 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.5.2] - 2026-10-05
+
+### Changed
+- **80 MHz SPI is back for the full-backlight images** (`invert`, `noinvert`). Root cause of the 1.5.0 glitch:
+  80 MHz together with a PWM-dimmed backlight sometimes garbled the picture while Bluetooth started or stopped.
+  With the backlight full-on, 80 MHz is clean (tested by switching SIM ↔ OBD BT repeatedly on the board
+  that showed it).
+  - The dimmable images (`invert-dim`, `noinvert-dim`) stay at 40 MHz.
+  - Either way it runs 60 fps.
+
 ## [1.5.1] - 2026-10-05
 
 ### Fixed
