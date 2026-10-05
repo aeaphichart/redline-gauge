@@ -10,7 +10,7 @@
 
 namespace settings_ui {
 
-const char *const kSourceLabels[SRC_COUNT] = { "SIM", "TOUCH", "SERIAL", "OBD BT", "CUSTOM" };
+const char *const kSourceLabels[SRC_COUNT] = { "SIM", "TOUCH", "SERIAL", "OBD BT", "CUSTOM", "HONDA" };
 
 // ---- layout ----------------------------------------------------------------------
 struct Rect { int x, y, w, h; };
@@ -22,7 +22,7 @@ static bool inside(const Rect &r, int x, int y) {
 static const Rect R_DONE = { 250, 4, 64, 22 };
 static const Rect R_TIMER = { 178, 4, 66, 22 };   // drag timer screen
 static Rect themeCard(int i)  { return { 8 + i * 104, 46, 96, 72 }; }
-static Rect sourceBtn(int i)  { return { 8 + i * 61, 152, 58, 22 }; }
+static Rect sourceBtn(int i)  { return { 8 + i * 51, 152, 49, 22 }; }
 static const Rect R_SHIFT_DN = {   8, 194, 26, 22 };
 static const Rect R_SHIFT_V  = {  36, 194, 78, 22 };
 static const Rect R_SHIFT_UP = { 116, 194, 26, 22 };
@@ -105,7 +105,8 @@ static void compose(Canvas &cv, const Settings &s) {
     for (int i = 0; i < THEME_COUNT; i++) themeThumb(cv, t, i, i == s.theme);
 
     cv.text(font_small, 12, 148, "DATA SOURCE", C(C_MUTED), ALIGN_LEFT, 1);
-    for (int i = 0; i < SRC_COUNT; i++) button(cv, t, sourceBtn(i), kSourceLabels[i], i == s.source);
+    // six sources: the compact font keeps every label clear of the button edges
+    for (int i = 0; i < SRC_COUNT; i++) button(cv, t, sourceBtn(i), kSourceLabels[i], i == s.source, font_small);
 
     char buf[16];
     cv.text(font_small, 12, 190, "SHIFT LIGHT RPM", C(C_MUTED), ALIGN_LEFT, 1);

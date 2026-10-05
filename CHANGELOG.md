@@ -4,6 +4,17 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.6.0] - 2026-10-05
+
+### Added
+- **HONDA K data source (experimental)**: reads Honda PGM-FI motorcycles (red 4-pin connector, about
+  2008-2018, e.g. CB500X) over K-line, through a transceiver board on CN1 (GPIO 27 RX / GPIO 22 TX, 3.3 V).
+  - Wakes the ECU, then polls engine table 0x11 (or 0x10 / 0x17) at about 15 Hz, plus 0xD1 for neutral.
+  - Values: RPM, speed, engine temp, intake temp, battery, throttle.
+  - Serial `kdump` prints the raw tables to map bytes on a new model.
+  - Not yet tested on a bike.
+- SETUP shows six data sources (the buttons use the compact font).
+
 ## [1.5.3] - 2026-10-05
 
 ### Fixed

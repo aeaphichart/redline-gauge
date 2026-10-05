@@ -209,6 +209,31 @@ SETUP → **TIMER** (or `timer` over serial). Works with any source that deliver
   about ±0.2 s. A 10 Hz GPS feeding `spd=` over SERIAL is better. For fun and comparing your own runs —
   do it on a track, not on public roads.
 
+## Honda motorcycles over K-line (HONDA K, experimental)
+
+SETUP → DATA SOURCE → **HONDA**, or `mode=honda`. This reads the ECU through the red 4-pin diagnostic connector
+of Honda PGM-FI bikes from about 2008 to 2018. Examples: CB500X/F, CBR500R, CBR250/300, CRF250L, MSX, PCX,
+Click i, Wave i. Bikes from 2019 on often use CAN instead, which this mode can't read.
+
+- **Hardware**: a K-line transceiver board between the bike and the CYD, either an L9637D board or an
+  opto-isolated "K-line FTDI" board.
+  - Car side: orange = K-line, green = GND, white/black = +12 V switched. Leave brown (SCS) unconnected.
+  - CYD side (CN1): board RX-out → **GPIO 27**, **GPIO 22** → board TX-in, VCC → **3.3 V** (never 5 V), GND.
+    Pins: `KLINE_RX_PIN` / `KLINE_TX_PIN` in `config.h`.
+- **What it does**: wakes the ECU (K low 70 ms, high 120 ms), then sends `FE 04 72 8C` and `72 05 00 F0 99`.
+  It then polls the engine table (0x11, or 0x10 / 0x17) about 15 times a second, plus 0xD1 for neutral.
+- **Values**:
+  - RPM, speed, engine temp, intake temp, battery, throttle %.
+  - Neutral shows N. Other gears are estimated from rpm and speed, because the ECU doesn't send a gear number.
+- **Status bar**:
+  - `K-LINE INIT` while connecting.
+  - `NO K-LINE` when no echo came back: wiring or TX/RX swapped.
+  - `NO ECU` when the wiring echoes but the ECU doesn't answer: ignition off, or a CAN bike.
+- **`kdump`** over serial prints every table raw once a second and marks the bytes that changed. Use it to
+  check the byte layout on a new model: idle, then blip the throttle.
+- Experimental: the protocol and table 0x11 layout come from published logs (HondaECU, CRF250L, CBR600RR).
+  It has not been run on a bike with REDLINE yet. Please report results.
+
 ## Motorcycles (e.g. Honda Wave)
 OBD BT does **not** work on Honda bikes: their 4-pin DLC speaks Honda's own K-Line protocol, not car OBD-II.
 Use **CUSTOM** instead: ignition pulse → opto → GPIO 22 (`PulseInput`, usually 1 pulse/rev on a single),

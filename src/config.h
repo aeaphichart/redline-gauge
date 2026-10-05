@@ -1,5 +1,5 @@
 #pragma once
-#define REDLINE_VERSION "1.5.3"
+#define REDLINE_VERSION "1.6.0"
 // ============================================================================
 //  Smart gauge configuration — everything you'd tune for a specific car lives here.
 // ============================================================================
@@ -69,6 +69,12 @@
 // Same line protocol as USB (see serial_source.h). Set -1 to free GPIO 27 for other uses.
 #define EXT_SERIAL_RX_PIN   27
 #define EXT_SERIAL_BAUD  115200
+
+// ---- Honda K-line (HONDA K source: red 4-pin connector on ~2008-2018 PGM-FI bikes) --------
+// Through a K-line transceiver board (L9637D / opto-isolated "K-line FTDI" board, logic VCC
+// from 3.3 V): board RX-out -> KLINE_RX_PIN, KLINE_TX_PIN -> board TX-in. Both on CN1.
+#define KLINE_RX_PIN        27
+#define KLINE_TX_PIN        22
 
 // ---- Hardware (CYD) -----------------------------------------------------------
 #define PIN_SPEAKER          26

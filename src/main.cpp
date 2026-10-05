@@ -22,6 +22,7 @@
 #include "data/serial_source.h"
 #include "data/obd_source.h"
 #include "data/custom_source.h"
+#include "data/honda_source.h"
 #include "ui/gauge_model.h"
 #include "ui/gauge_ui.h"
 #include "ui/settings_ui.h"
@@ -41,7 +42,8 @@ static SimSource    simTouch(true);
 static SerialSource serialSrc;
 static ObdSource    obdSrc;
 static CustomSource customSrc;
-static DataSource *const sources[SRC_COUNT] = { &simAuto, &simTouch, &serialSrc, &obdSrc, &customSrc };
+static HondaKSource hondaSrc;
+static DataSource *const sources[SRC_COUNT] = { &simAuto, &simTouch, &serialSrc, &obdSrc, &customSrc, &hondaSrc };
 
 static volatile int requestedSrc = SRC_SIM_AUTO;
 static volatile int activeSrc = -1;
@@ -106,10 +108,10 @@ static GaugeModel model;
 static void printHelp() {
     Serial.println(F(
         "\n=== REDLINE " REDLINE_VERSION " — crafted by birdlab.th (birdlab.moomdate.tech) ===\n"
-        "  mode=sim|touch|serial|obd|custom   theme=ice|lime|amber   shift=7000\n"
+        "  mode=sim|touch|serial|obd|custom|honda   theme=ice|lime|amber   shift=7000\n"
         "  bright=20..100   beep=on|off   peak=reset   help\n"
         "  panels=auto|standard|hybrid   gearmode=auto|off\n"
-        "  timer   timerlog   timerlog=clear\n"
+        "  timer   timerlog   timerlog=clear   kdump (HONDA K raw tables)\n"
         "  obd=scan | obd=AA:BB:CC:DD:EE:FF   obdpin=1234|0000 (empty = auto)\n"
         "data (SERIAL mode):  rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3\n"
         "           or JSON:  {\"rpm\":3200,\"speed\":86,\"coolant\":87,\"voltage\":13.9}\n"));
@@ -140,10 +142,11 @@ static void handleLine(char *line) {
     bool changed = true;
 
     if (keyIs(p, "mode", &v)) {
-        static const char *const keys[SRC_COUNT] = { "sim", "touch", "serial", "obd", "custom" };
+        static const char *const keys[SRC_COUNT] = { "sim", "touch", "serial", "obd", "custom", "honda" };
         int found = -1;
         for (int i = 0; i < SRC_COUNT; i++) if (!strncasecmp(v, keys[i], strlen(keys[i]))) found = i;
         if (!strncasecmp(v, "auto", 4)) found = SRC_SIM_AUTO;
+        if (!strncasecmp(v, "kline", 5)) found = SRC_HONDA;
         if (found < 0) { Serial.println("[gauge] unknown mode"); return; }
         s.source = found;
     } else if (keyIs(p, "theme", &v)) {
@@ -188,6 +191,11 @@ static void handleLine(char *line) {
         return;
     } else if (!strncasecmp(p, "timer", 5)) {
         openTimer();
+        return;
+    } else if (!strncasecmp(p, "kdump", 5)) {
+        HondaKSource::dumpOn = !HondaKSource::dumpOn;
+        Serial.printf("[gauge] K-line table dump %s%s\n", HondaKSource::dumpOn ? "ON" : "OFF",
+                      activeSrc == SRC_HONDA ? "" : " (needs mode=honda)");
         return;
     } else if (!strncasecmp(p, "bench", 5)) {
         runBench();
@@ -254,7 +262,7 @@ static void pollSerial() {
     usb.poll(Serial);
 #if EXT_SERIAL_RX_PIN >= 0
     static LineReader ext;
-    ext.poll(Serial2);
+    if (!HondaKSource::ownsUart) ext.poll(Serial2);  // HONDA K borrows the UART for K-line
 #endif
 }
 
