@@ -60,6 +60,7 @@ static void loadSettings() {
     settings.beep       = prefs.getBool("beep", settings.beep);
     settings.panels     = prefs.getUChar("panels", settings.panels);
     settings.gearMode   = prefs.getUChar("gearm", settings.gearMode);
+    settings.invert     = prefs.getBool("invert", settings.invert);
     if (settings.panels >= PANELS_COUNT) settings.panels = PANELS_AUTO;
     if (settings.gearMode >= GEARMODE_COUNT) settings.gearMode = GEARMODE_AUTO;
     if (settings.theme >= THEME_COUNT) settings.theme = 0;
@@ -76,6 +77,7 @@ static void saveSettings() {   // Preferences only writes keys whose value chang
     prefs.putBool("beep", settings.beep);
     prefs.putUChar("panels", settings.panels);
     prefs.putUChar("gearm", settings.gearMode);
+    prefs.putBool("invert", settings.invert);
 }
 
 static void backlightBegin() {
@@ -110,7 +112,7 @@ static void printHelp() {
         "\n=== REDLINE " REDLINE_VERSION " — crafted by birdlab.th (birdlab.moomdate.tech) ===\n"
         "  mode=sim|touch|serial|obd|custom|honda   theme=ice|lime|amber   shift=7000\n"
         "  bright=20..100   beep=on|off   peak=reset   help\n"
-        "  panels=auto|standard|hybrid   gearmode=auto|off\n"
+        "  panels=auto|standard|hybrid   gearmode=auto|off   invert=on|off (panel colours)\n"
         "  timer   timerlog   timerlog=clear   kdump (HONDA K raw tables)\n"
         "  obd=scan | obd=AA:BB:CC:DD:EE:FF   obdpin=1234|0000 (empty = auto)\n"
         "data (SERIAL mode):  rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3\n"
@@ -168,6 +170,8 @@ static void handleLine(char *line) {
         else if (!strncasecmp(v, "std", 3) || !strncasecmp(v, "standard", 8)) s.panels = PANELS_STANDARD;
         else if (!strncasecmp(v, "hyb", 3)) s.panels = PANELS_HYBRID;
         else { Serial.println("[gauge] panels=auto|standard|hybrid"); return; }
+    } else if (keyIs(p, "invert", &v)) {
+        s.invert = !strncasecmp(v, "on", 2) || *v == '1';
     } else if (keyIs(p, "gearmode", &v)) {           // not "gear=": that's a data key
         if (!strncasecmp(v, "auto", 4) || !strncasecmp(v, "on", 2)) s.gearMode = GEARMODE_AUTO;
         else if (!strncasecmp(v, "off", 3)) s.gearMode = GEARMODE_OFF;
@@ -415,6 +419,10 @@ static void applySettings(const Settings &next, bool repaint) {
         if (activeSrc == SRC_OBD) Serial.println("[gauge] switching after the Bluetooth attempt finishes…");
     }
     if (next.brightness != prev.brightness) setBacklight(next.brightness);
+    if (next.invert != prev.invert) {
+        tft.invertDisplay(next.invert);
+        Serial.printf("[gauge] colour inversion %s\n", next.invert ? "ON" : "OFF");
+    }
     model.setShiftRpm(next.shiftRpm);
     model.setPanels(next.panels);
     model.setGearHidden(next.gearMode == GEARMODE_OFF);
@@ -588,6 +596,7 @@ void setup() {
     loadRunLog();
 
     tft.init();
+    tft.invertDisplay(settings.invert);              // saved choice beats the build default
     tft.setRotation(1);
     tft.setSwapBytes(true);                          // canvas holds plain RGB565
     backlightBegin();

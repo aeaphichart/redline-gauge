@@ -3,6 +3,12 @@
 
 ## Which file? / ใช้ไฟล์ไหน
 
+**Wrong colours after flashing (white background, colours like a photo negative)?** From v1.6.2 just tap
+**SETUP → COLORS** on the board: it flips the panel colours and remembers it. No need to flash the other file.
+**จอขาว / สีกลับด้านหลังแฟลช?** ตั้งแต่ v1.6.2 กด **SETUP → COLORS** บนจอได้เลย สลับสีให้และจำไว้ ไม่ต้องแฟลชไฟล์อื่น
+
+
+
 | File / ไฟล์ | Use when / ใช้เมื่อ |
 |---|---|
 | `…-invert-factory.bin` | **Start here.** Most CYD boards. ส่วนใหญ่ใช้ตัวนี้ |

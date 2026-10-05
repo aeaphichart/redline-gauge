@@ -4,6 +4,15 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.6.2] - 2026-10-05
+
+### Added
+- **SETUP → COLORS** (and serial `invert=on|off`): flips the panel colour inversion on the spot and saves it.
+  - Flashing the "wrong" image (`invert` vs `noinvert`) no longer leaves a white, negative-looking screen:
+    tap COLORS once.
+  - The image you flash only sets the starting value.
+- The settings header shows the version at the right of the THEME row.
+
 ## [1.6.1] - 2026-10-05
 
 ### Fixed

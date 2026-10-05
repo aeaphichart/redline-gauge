@@ -23,11 +23,13 @@ import serial.tools.list_ports
 
 REPO = "moomdate/redline-gauge"
 API = f"https://api.github.com/repos/{REPO}/releases"
+# Panel colours only set the starting point: from v1.6.2 SETUP -> COLORS flips them on the
+# board (saved), so a wrong pick is fixed with one tap. The -dim builds add BRIGHTNESS.
 VARIANTS = {
     "invert": "Most CYD boards (start here)",
-    "noinvert": "Colours look inverted / white background with 'invert'",
-    "invert-dim": "Like invert, with BRIGHTNESS control (backlight that dims)",
-    "noinvert-dim": "Like noinvert, with BRIGHTNESS control",
+    "noinvert": "Panels that show a white background with 'invert'",
+    "invert-dim": "Like invert + BRIGHTNESS control",
+    "noinvert-dim": "Like noinvert + BRIGHTNESS control",
 }
 MODES = {
     "factory": ("0x0", "First install - erases settings and run log"),
@@ -294,7 +296,7 @@ def gui(a):
     frm.rowconfigure(r, weight=1)
 
     refresh_ports()
-    log("Panel: try 'invert' first. White background / wrong colours -> flash 'noinvert'.")
+    log("Panel: pick any; wrong colours (white background) after flashing? Tap SETUP -> COLORS (v1.6.2+).")
     if a.selftest:                                  # CI: build the window, then close it
         root.after(1500, root.destroy)
     else:

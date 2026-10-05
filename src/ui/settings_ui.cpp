@@ -21,6 +21,7 @@ static bool inside(const Rect &r, int x, int y) {
 
 static const Rect R_DONE = { 250, 4, 64, 22 };
 static const Rect R_TIMER = { 178, 4, 66, 22 };   // drag timer screen
+static const Rect R_COLORS = { 102, 4, 72, 22 };  // flip panel colour inversion
 static Rect themeCard(int i)  { return { 8 + i * 104, 46, 96, 72 }; }
 static Rect sourceBtn(int i)  { return { 8 + i * 51, 152, 49, 22 }; }
 static const Rect R_SHIFT_DN = {   8, 194, 26, 22 };
@@ -95,7 +96,8 @@ static void compose(Canvas &cv, const Settings &s) {
     for (int i = 0; i < cv.w * cv.h; i++) cv.px[i] = blend565(215, 0, cv.px[i]);
 
     cv.text(font_ui, 12, 20, "SETTINGS", C(t.accentBright), ALIGN_LEFT, 2);
-    cv.text(font_small, 100, 19, "v" REDLINE_VERSION, C(C_MUTED));
+    cv.text(font_small, 312, 41, "v" REDLINE_VERSION, C(C_MUTED), ALIGN_RIGHT);
+    button(cv, t, R_COLORS, "COLORS", false);
     button(cv, t, R_TIMER, "TIMER", false);
     button(cv, t, R_DONE, "DONE", true);
     for (int x = 8; x < 312; x++)                                   // accent rule fading out
@@ -153,6 +155,7 @@ Action tap(int x, int y, Settings &s) {
         return ACT_RESET_PEAK;
     }
     if (inside(R_TIMER, x, y)) return ACT_TIMER;
+    if (inside(R_COLORS, x, y)) { s.invert = !s.invert; return ACT_CHANGED; }   // main applies it
     for (int i = 0; i < THEME_COUNT; i++) {
         Rect r = themeCard(i);
         r.h += 18;                                     // name row is tappable too

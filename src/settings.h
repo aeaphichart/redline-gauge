@@ -21,6 +21,13 @@ struct Settings {
     bool     beep       = SHIFT_BEEP;    // shift / warning beeps
     uint8_t  panels     = PANELS_AUTO;
     uint8_t  gearMode   = GEARMODE_AUTO;
+    // Panel colour inversion. The build picks the default (esp32dev = inverted panel), but
+    // CYD batches differ, so SETUP -> COLORS flips it at runtime and it is saved.
+#ifdef TFT_INVERSION_ON
+    bool     invert     = true;
+#else
+    bool     invert     = false;
+#endif
 
     static const uint16_t kShiftMin = 3000, kShiftMax = RPM_MAX, kShiftStep = 250;
     static const uint8_t  kBrightMin = 20, kBrightStep = 20;

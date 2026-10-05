@@ -74,6 +74,7 @@ If the splash is removed or the logo is changed, the status bar shows `UNOFFICIA
 - **BEEP ON/OFF**, **RESET PEAK**, **DONE** to go back
 - **PANEL AUTO / STD / HYB**: right-hand panels. STD = COOLANT · VOLTAGE · INTAKE; HYB = COOLANT · HV BATT (%) · HV POWER (kW, negative = regen);
   AUTO switches to HYB as soon as the source delivers hybrid battery data (e.g. OBD on a Honda e:HEV)
+- **COLORS**: flips the panel colours (inverted / normal) and saves it, for when the screen shows a white background after flashing.
 - **GEAR AUTO / OFF**: OFF hides the gear box — use it on hybrids and CVTs, where an estimated gear means nothing
 
 Every value is saved in NVS and restored after a reboot.
