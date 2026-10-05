@@ -70,7 +70,7 @@ If the splash is removed or the logo is changed, the status bar shows `UNOFFICIA
 - **THEME**: ICE BLUE / ACID LIME / AMBER (tap a thumbnail to change the theme immediately)
 - **DATA SOURCE**: SIM · TOUCH · SERIAL · OBD BT · CUSTOM
 - **SHIFT LIGHT RPM**: ± 250 (3,000 – `RPM_MAX`)
-- **BRIGHTNESS**: hidden by default — on some CYD batches the backlight goes dark with any PWM dimming, so it runs full-on. Other batches dim fine: flash `-e esp32dev-dim` (or set `BACKLIGHT_DIMMING 1` in `config.h`) to get a 20–100% control back. Try it: if the screen goes black at 50%, go back to `esp32dev`
+- **BRIGHTNESS**: on the `-dim` images (`invert-dim` / `noinvert-dim`, envs `esp32dev-dim` / `cyd-noinvert-dim`, or `BACKLIGHT_DIMMING 1` in `config.h`): 20–100 %. The plain images keep the backlight full-on.
 - **BEEP ON/OFF**, **RESET PEAK**, **DONE** to go back
 - **PANEL AUTO / STD / HYB**: right-hand panels. STD = COOLANT · VOLTAGE · INTAKE; HYB = COOLANT · HV BATT (%) · HV POWER (kW, negative = regen);
   AUTO switches to HYB as soon as the source delivers hybrid battery data (e.g. OBD on a Honda e:HEV)
@@ -256,7 +256,7 @@ tools/
   and the RPM / speed numbers (tabular digits) send just the digit cells that changed. The whole region is still
   painted and clipped, so the result is pixel-identical to a full repaint — a host test checks that on every frame
   of a full sweep.
-- SPI runs at 80 MHz on the full-backlight builds and 40 MHz on the `-dim` builds. 80 MHz plus a PWM-dimmed backlight sometimes garbled the picture while Bluetooth started or stopped. Both run 60 fps.
+- SPI runs at 80 MHz (all images). Beeps are kept at 60 % volume, and touch clicks never overlap a redraw: a full-volume beep during a big push could garble the picture on PWM-dimmed boards.
 - Measured on the CYD with `bench` (serial command, fixed 0 → 8000 → 0 sweep): **7.9 ms per frame, 126 fps possible** at 80 MHz SPI (8.7 ms / 115 fps at 40 MHz)
   (was 23.6 ms / 42 fps), 11.7 KB pushed per frame (was 44 KB). The UI runs capped at 60 fps (`UI_FPS`).
 - Fonts are anti-aliased and blended against the *actual background pixels*

@@ -78,7 +78,12 @@ static void saveSettings() {   // Preferences only writes keys whose value chang
 
 static void backlightBegin() {
 #if BACKLIGHT_DIMMING
-    ledcAttach(TFT_BL, 5000, 8);                     // after tft.init() has driven TFT_BL HIGH
+    // Explicit channel 8 (low-speed group: its own timers, apart from the speaker on ch0).
+    // ESP32 LEDC latches one duty update per PWM period: a second ledcWrite inside the
+    // same 200 us is lost. Attaching writes duty 0 itself, so wait a period before the
+    // caller's setBacklight() - otherwise that write is dropped and the screen stays dark.
+    ledcAttachChannel(TFT_BL, 5000, 8, 8);           // after tft.init() has driven TFT_BL HIGH
+    delayMicroseconds(500);
 #else
     pinMode(TFT_BL, OUTPUT);
     digitalWrite(TFT_BL, HIGH);                      // full on: this board can't dim with PWM
@@ -271,10 +276,29 @@ static void dataTask(void *) {
 // ---- outputs: RGB LED + speaker ---------------------------------------------------------
 static uint32_t toneOffAt = 0;
 
+// Speaker on LEDC channel 0, 10-bit. Frequency change and duty are separate single writes:
+// ledcWriteTone() writes 50 % duty itself, and a second ledcWrite right after it falls in the
+// same PWM period and is lost (the tone then played at full volume).
+static void toneOn(uint32_t freq) {
+    ledcChangeFrequency(PIN_SPEAKER, freq, 10);
+    ledcWrite(PIN_SPEAKER, 512u * SPEAKER_VOLUME / 100);   // 512 = 50 % duty = loudest
+}
+static void toneOff() { ledcWrite(PIN_SPEAKER, 0); }
+
 static void beep(uint32_t freq, uint32_t ms, bool force = false) {
     if (!settings.beep && !force) return;
-    ledcWriteTone(PIN_SPEAKER, freq);
+    toneOn(freq);
     toneOffAt = millis() + ms;
+}
+
+// Touch feedback click: plays to the end BEFORE the screen redraws. A beep's current draw
+// overlapping a big SPI push garbled the 80 MHz picture now and then (seen on a CYD with a
+// PWM-dimmed backlight), so UI clicks never overlap drawing. Always plays, even with BEEP off.
+static void click(uint32_t freq = 2400, uint32_t ms = 15) {
+    toneOn(freq);
+    delay(ms);
+    toneOff();
+    toneOffAt = 0;
 }
 
 static void setLed(bool r, bool g, bool b) {       // active LOW
@@ -299,7 +323,7 @@ static void updateOutputs(const GaugeView *v) {
     wasCrit = crit;
 
     if (toneOffAt && (int32_t)(millis() - toneOffAt) >= 0) {
-        ledcWriteTone(PIN_SPEAKER, 0);
+        toneOff();
         toneOffAt = 0;
     }
 }
@@ -419,10 +443,10 @@ static void handleTouch() {
             down = false;
             Settings s = settings;
             switch (settings_ui::tap(sx, sy, s)) {
-                case settings_ui::ACT_CHANGED:    beep(2400, 15, true); applySettings(s, false); break;
-                case settings_ui::ACT_RESET_PEAK: beep(1800, 40, true); model.resetPeaks(); break;
-                case settings_ui::ACT_CLOSE:      beep(2400, 15, true); closeSettings(); break;
-                case settings_ui::ACT_TIMER:      beep(2400, 15, true); openTimer(); break;
+                case settings_ui::ACT_CHANGED:    click(); applySettings(s, false); break;
+                case settings_ui::ACT_RESET_PEAK: click(1800, 40); model.resetPeaks(); break;
+                case settings_ui::ACT_CLOSE:      click(); closeSettings(); break;
+                case settings_ui::ACT_TIMER:      click(); openTimer(); break;
                 default: break;
             }
         }
@@ -437,14 +461,14 @@ static void handleTouch() {
             down = false;
             switch (timer_ui::tapTimer(sx, sy, dragTimer)) {
                 case timer_ui::ACT_EXIT:
-                    beep(2400, 15, true);
+                    click();
                     ObdSource::fastSpeed = false;
                     SimSource::touchThrottle = 0;
                     closeSettings();                     // back to the gauge
                     break;
                 case timer_ui::ACT_ABORT:
-                case timer_ui::ACT_AGAIN: beep(1800, 30, true); dragTimer.again(); break;
-                case timer_ui::ACT_LOG:   beep(2400, 15, true); openRunLog(); break;
+                case timer_ui::ACT_AGAIN: click(1800, 30); dragTimer.again(); break;
+                case timer_ui::ACT_LOG:   click(); openRunLog(); break;
                 default: break;
             }
         }
@@ -458,7 +482,7 @@ static void handleTouch() {
             float f = (millis() - downAt) / 1200.0f;
             if (f >= 1 && !longDone) {
                 longDone = true;
-                beep(900, 120, true);
+                click(900, 120);
                 clearRunLog();
             } else if (!longDone && millis() - lastFill > 120) {
                 lastFill = millis();
@@ -469,8 +493,8 @@ static void handleTouch() {
             down = false;
             if (timer_ui::hitClear(sx, sy) && !longDone) timer_ui::drawLog(runLog);   // let go early
             switch (timer_ui::tapLog(sx, sy)) {
-                case timer_ui::ACT_BACK:    beep(2400, 15, true); backToTimer(); break;
-                case timer_ui::ACT_NEW_RUN: beep(2400, 15, true); dragTimer.again(); backToTimer(); break;
+                case timer_ui::ACT_BACK:    click(); backToTimer(); break;
+                case timer_ui::ACT_NEW_RUN: click(); dragTimer.again(); backToTimer(); break;
                 default: break;
             }
         }
@@ -486,14 +510,14 @@ static void handleTouch() {
         gauge_ui::hitMain(sx, sy) && activeSrc != SRC_SIM_TOUCH) {
         longDone = true;
         model.resetPeaks();
-        beep(1800, 40, true);
+        click(1800, 40);
     }
 
     if (!pressed && down) {
         down = false;
         if (!longDone && millis() - downAt < 600 &&
             (gauge_ui::hitSetup(sx, sy) || gauge_ui::hitStatus(sx, sy))) {
-            beep(2400, 15, true);
+            click();
             openSettings();
         }
     }
@@ -558,8 +582,7 @@ void setup() {
     pinMode(PIN_LED_G, OUTPUT);
     pinMode(PIN_LED_B, OUTPUT);
     setLed(false, false, false);
-    ledcAttach(PIN_SPEAKER, 2000, 8);               // Arduino-ESP32 core 3.x API
-    ledcWriteTone(PIN_SPEAKER, 0);
+    ledcAttachChannel(PIN_SPEAKER, 2000, 10, 0);    // silent until toneOn()
 
     loadSettings();
     loadRunLog();
@@ -582,7 +605,7 @@ void setup() {
     splash_ui::progress(pushToTft, kThemes[settings.theme], 1.0f);
     beep(2600, 25);                                  // short "ready" chirp (if beep is on)
     delay(25);
-    ledcWriteTone(PIN_SPEAKER, 0);
+    toneOff();
     toneOffAt = 0;
     delay(155);
     while (touch.Pressed()) delay(10);               // don't let the skip-tap reach the gauge

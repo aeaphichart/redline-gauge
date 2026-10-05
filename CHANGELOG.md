@@ -4,6 +4,26 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.5.3] - 2026-10-05
+
+### Fixed
+- **Dimmed screen staying dark after power-on**:
+  - With BRIGHTNESS saved below 100 %, the `-dim` images booted with the backlight off. On some boards it also
+    went dark when dimmed later.
+  - Cause: the ESP32's LEDC accepts one duty change per PWM period. The brightness write right after attaching
+    the backlight was silently lost.
+  - This was never a hardware limit. Older notes saying "this CYD can't dim" were wrong.
+- **Beeps were always full volume**: the 60 % volume write came right after the tone started and was lost
+  the same way.
+- **Display glitch on `-dim` images at 80 MHz** (shifted / torn picture coinciding with beeps):
+  - Beeps are now at 60 % volume.
+  - Touch clicks finish before the screen redraws.
+  - The speaker and the backlight use fixed, separate PWM channels.
+
+### Changed
+- All images run 80 MHz SPI again, the `-dim` ones included (tested on the board that showed the glitch).
+- `SPEAKER_VOLUME` (default 60 %) in `config.h`.
+
 ## [1.5.2] - 2026-10-05
 
 ### Changed

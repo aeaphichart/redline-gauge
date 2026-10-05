@@ -1,5 +1,5 @@
 #pragma once
-#define REDLINE_VERSION "1.5.2"
+#define REDLINE_VERSION "1.5.3"
 // ============================================================================
 //  Smart gauge configuration — everything you'd tune for a specific car lives here.
 // ============================================================================
@@ -76,6 +76,9 @@
 #define PIN_LED_G            16
 #define PIN_LED_B            17
 #define SHIFT_BEEP            1     // 1 = short beep when crossing RPM_SHIFT
+// Speaker loudness, % of full (square-wave duty: 100 % = 50 % duty). Kept at 60 %: full-volume
+// beeps pull current spikes that, with a PWM-dimmed backlight, could garble the 80 MHz display.
+#define SPEAKER_VOLUME       60
 #define TOUCH_LONGPRESS_MS  800
 
 // ---- Side-panel captions (uppercase A-Z and spaces only) ----------------------
@@ -90,9 +93,9 @@
 #define STATUS_TITLE       "REDLINE"
 
 // ---- Backlight ---------------------------------------------------------------------------
-// Verified on the CYD: its backlight goes completely dark with ANY PWM duty below 100 %
-// (20 % and ~43 % both blank the screen). So by default the backlight is driven plain HIGH
-// and the BRIGHTNESS setting is hidden. Set 1 only on a board whose backlight really dims.
+// 1 = PWM-dim the backlight (BRIGHTNESS 20-100 % on the SETUP page); the *-dim envs set it.
+// Default 0 = driven plain HIGH, BRIGHTNESS hidden. (Up to 1.5.2 a "goes dark when dimmed"
+// bug was blamed on the hardware; it was a lost LEDC duty write, fixed in 1.5.3.)
 #ifndef BACKLIGHT_DIMMING          // (#ifndef so a board env can turn it on with -D)
 #define BACKLIGHT_DIMMING 0
 #endif
