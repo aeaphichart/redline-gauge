@@ -101,6 +101,9 @@ coolant/intake heat model, and alternator voltage. It even cranks on start-up (v
 SIM AUTO loops a scripted drive: idle → city → full-throttle pull through the shift light → braking → highway.
 
 ### 2. OBD BT — ELM327 Bluetooth Classic (real car)
+
+**Which cars work?** See the [compatibility checklist](docs/compatibility.md): Thai-market pickups, sedans, hybrids and EVs.
+
 1. Plug the ELM327 into the car's OBD port and turn the ignition to ON / start the engine.
    **Disconnect any phone from the adapter first** (close the OBD app / turn phone Bluetooth off):
    an ELM327 accepts only one connection at a time.
