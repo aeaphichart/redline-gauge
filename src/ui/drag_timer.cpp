@@ -13,6 +13,7 @@ static const float kStillKmh   = 1.0f;     // below this the car counts as stopp
 static const float kArmMs      = 1000;     // stopped this long -> STAGED
 static const float kRearmMs    = 3000;     // after a result: stopped this long -> next run
 static const float kLiftKmh    = 10;       // speed this far under the run's max ends it
+static const float kMinLogKmh  = 30;       // a run must get past this to be logged
 
 // ---- log -------------------------------------------------------------------------------
 void RunLog::add(RunRecord r) {
@@ -95,7 +96,7 @@ float DragTimer::elapsed(uint32_t now) const {
 }
 
 TimerEvent DragTimer::end(const RunLog &log) {
-    if (!crossed_[0]) { state_ = TS_NO_RESULT; stillSince_ = -1; return TE_DISCARD; }
+    if (maxV_ < kMinLogKmh) { state_ = TS_NO_RESULT; stillSince_ = -1; return TE_DISCARD; }
     rec_ = {};
     for (int s = 0; s < SEG_COUNT; s++) {
         rec_.cs[s] = RUN_NONE;
@@ -105,6 +106,8 @@ TimerEvent DragTimer::end(const RunLog &log) {
         newBest_[s] = rec_.cs[s] < log.best(s);
     }
     rec_.maxKmh = (uint16_t)lroundf(maxV_);
+    double toMax = (maxT_ - start_) / 10.0;
+    rec_.toMaxCs = toMax < 0 ? 0 : toMax > 65000 ? 65000 : (uint16_t)lround(toMax);
     stillSince_ = -1;
     state_ = crossed_[3] ? TS_FINISH : TS_SAVED;
     return state_ == TS_FINISH ? TE_FINISH : TE_SAVED;
@@ -162,7 +165,7 @@ TimerEvent DragTimer::update(float v, uint32_t stamp, uint32_t now, const RunLog
                 crossed_[i] = true;
                 ev = TE_SPLIT;
             }
-        if (v > maxV_) maxV_ = v;
+        if (v > maxV_) { maxV_ = v; maxT_ = t; }
         if (crossed_[3]) ev = end(log);
         else if (v < maxV_ - kLiftKmh || v < kStillKmh) ev = end(log);
         break;

@@ -333,14 +333,14 @@ static void printRunLog() {
     static const char *const names[SEG_COUNT] = { "0-100", "100-120", "120-160", "0-200", "160-200" };
     Serial.printf("run");
     for (const char *n : names) Serial.printf(",%s", n);
-    Serial.println(",max_kmh");
+    Serial.println(",max_kmh,to_max_s");
     for (int i = runLog.count - 1; i >= 0; i--) {             // oldest first, like a spreadsheet
         const RunRecord &r = runLog.runs[i];
         Serial.printf("%u", r.seq);
         for (int s = 0; s < SEG_COUNT; s++)
             if (r.cs[s] == RUN_NONE) Serial.print(",");
             else Serial.printf(",%u.%02u", r.cs[s] / 100, r.cs[s] % 100);
-        Serial.printf(",%u\n", r.maxKmh);
+        Serial.printf(",%u,%u.%02u\n", r.maxKmh, r.toMaxCs / 100, r.toMaxCs % 100);
     }
 }
 
@@ -637,10 +637,11 @@ void loop() {
                 saveRunLog();
                 beep(best ? 3400 : 2600, best ? 400 : 200);
                 const RunRecord &r = runLog.runs[0];
-                Serial.printf("[timer] run %u saved: 0-100 %s  0-200 %s  max %u km/h%s\n", r.seq,
+                Serial.printf("[timer] run %u saved: top %u km/h in %u.%02u s, 0-100 %s, 0-200 %s%s\n", r.seq,
+                              r.maxKmh, r.toMaxCs / 100, r.toMaxCs % 100,
                               r.cs[SEG_0_100] == RUN_NONE ? "--" : String(r.cs[SEG_0_100] / 100.0f, 2).c_str(),
                               r.cs[SEG_0_200] == RUN_NONE ? "--" : String(r.cs[SEG_0_200] / 100.0f, 2).c_str(),
-                              r.maxKmh, best ? "  NEW BEST" : "");
+                              best ? "  NEW BEST" : "");
                 break;
             }
             case TE_DISCARD: beep(900, 150); break;

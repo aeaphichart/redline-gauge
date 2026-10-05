@@ -7,7 +7,9 @@
 //   STAGED -> speed leaves 0               -> RUN (start time back-estimated from the
 //                                             first two moving samples)
 //   RUN   -> 200 km/h                      -> FINISH
-//   RUN   -> speed drops 10 below its max  -> SAVED (if 0-100 was done) / NO RESULT
+//   RUN   -> speed drops 10 below its max  -> SAVED with whatever it reached (top speed +
+//                                             time to it, and every split passed); runs that
+//                                             never got past 30 km/h are not logged
 //   result -> stopped for 3 s, or again()  -> STAGED for the next run
 // Each threshold crossing is interpolated between the two samples around it, so the
 // times are better than the sample rate (OBD speed is integer km/h at ~5-10 Hz).
@@ -20,12 +22,13 @@ struct RunRecord {
     uint16_t seq;                 // run number, 1..
     uint16_t cs[SEG_COUNT];       // segment times in 1/100 s, RUN_NONE = not reached
     uint16_t maxKmh;
+    uint16_t toMaxCs;             // time from launch to the top speed, 1/100 s
 };
 
 // Newest-first ring of saved runs. Plain data: main.cpp stores it as one NVS blob.
 struct RunLog {
     static const int kMax = 20;
-    uint8_t   version = 1;
+    uint8_t   version = 2;        // bump when RunRecord changes (an old log is then dropped)
     uint8_t   count = 0;
     uint16_t  nextSeq = 1;
     RunRecord runs[kMax];
@@ -58,6 +61,7 @@ public:
     bool  newBest(int seg) const { return newBest_[seg]; }
     float speed() const { return lastV_; }
     float maxKmh() const { return maxV_; }
+    float toMax() const { return (float)((maxT_ - start_) / 1000.0); }   // s, launch -> top speed
     const RunRecord &record() const { return rec_; }
 
 private:
@@ -73,6 +77,7 @@ private:
     double   cross_[kThresholds] = {};
     bool     crossed_[kThresholds] = {};
     float    maxV_ = 0;
+    double   maxT_ = 0;                         // when the top speed was reached
     bool     newBest_[SEG_COUNT] = {};
     RunRecord rec_ = {};
 

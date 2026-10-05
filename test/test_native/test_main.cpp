@@ -362,10 +362,18 @@ static void test_drag_timer_lift_and_arming() {
     // stop for 3 s: armed again
     for (int i = 0; i < 16; i++) d.feed(0);
     TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
-    // short run that never reaches 100: no result
+    // short run that never reaches 100: still logged with its top speed
     v = 0;
     while (v < 60) { v += 4; d.feed(v); }
-    TEST_ASSERT_EQUAL(TE_DISCARD, d.feed(40));
+    TEST_ASSERT_EQUAL(TE_SAVED, d.feed(40));
+    TEST_ASSERT_EQUAL(TS_SAVED, d.t.state());
+    TEST_ASSERT_EQUAL_UINT16(60, d.t.record().maxKmh);
+    TEST_ASSERT_UINT16_WITHIN(5, 300, d.t.record().toMaxCs);        // 15 samples x 0.2 s
+    TEST_ASSERT_EQUAL_UINT16(RUN_NONE, d.t.record().cs[SEG_0_100]);
+    // creeping forward under 30 km/h: not logged
+    for (int i = 0; i < 16; i++) d.feed(0);
+    d.feed(10); d.feed(20);
+    TEST_ASSERT_EQUAL(TE_DISCARD, d.feed(5));
     TEST_ASSERT_EQUAL(TS_NO_RESULT, d.t.state());
     // speed data disappears mid-run: run ends
     for (int i = 0; i < 16; i++) d.feed(0);

@@ -27,6 +27,7 @@ VARIANTS = {
     "invert": "Most CYD boards (start here)",
     "noinvert": "Colours look inverted / white background with 'invert'",
     "invert-dim": "Like invert, with BRIGHTNESS control (backlight that dims)",
+    "noinvert-dim": "Like noinvert, with BRIGHTNESS control",
 }
 MODES = {
     "factory": ("0x0", "First install - erases settings and run log"),
@@ -166,7 +167,7 @@ def cli(a):
             rel = rels[pick("Version", [r["tag_name"] for r in rels])]
         asset = asset_for(rel, variant, mode)
         if not asset:
-            sys.exit(f"{rel['tag_name']} has no '{variant}' image (invert-dim exists from v1.3.0).")
+            sys.exit(f"{rel['tag_name']} has no '{variant}' image (invert-dim exists from v1.3.0, noinvert-dim from v1.4.1).")
         path = download(asset["browser_download_url"], log)
 
     print(f"\nFlash {os.path.basename(path)} to {port} at {MODES[mode][0]}.")

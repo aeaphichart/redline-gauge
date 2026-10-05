@@ -9,6 +9,7 @@
 #   invert      esp32dev       panel needs colour inversion (most CYD boards)
 #   noinvert    cyd-noinvert   panel shows correct colours as-is
 #   invert-dim  esp32dev-dim   like "invert", for boards whose backlight dims (BRIGHTNESS)
+#   noinvert-dim cyd-noinvert-dim  like "noinvert", with BRIGHTNESS
 #
 # Env: PIO (default: pio), PY (python that can run esptool; default: python3).
 set -euo pipefail
@@ -25,6 +26,7 @@ variant() {
         esp32dev)     echo invert ;;
         cyd-noinvert) echo noinvert ;;
         esp32dev-dim) echo invert-dim ;;
+        cyd-noinvert-dim) echo noinvert-dim ;;
         *)            echo "$1" ;;
     esac
 }

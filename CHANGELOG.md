@@ -4,6 +4,19 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.5.0] - 2026-10-05
+
+### Changed
+- **Drag timer logs every run**, not only runs that reach 100 km/h.
+  - A run that ends early (lift or brake) is saved with its **top speed and the time to reach it**, plus any
+    splits it passed. The big number then shows that time ("0-144 KM/H (TOP SPEED) 10.30").
+  - Only runs that never got past 30 km/h are skipped.
+  - The log's last column is now TOP @TIME, and `timerlog` adds `to_max_s`.
+  - Logs saved by 1.4.0 are cleared once by this update (the record layout changed).
+
+### Added
+- **`noinvert-dim` image** (`cyd-noinvert-dim` env): normal-colour panel with BRIGHTNESS. The flasher lists it.
+
 ## [1.4.0] - 2026-10-05
 
 ### Added

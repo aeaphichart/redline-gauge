@@ -197,9 +197,10 @@ SETUP → **TIMER** (or `timer` over serial). Works with any source that deliver
   between two speed samples.
 - Splits on the right: **0-100**, **100-120**, **120-160** (a beep at each); the big number is the running clock
   and becomes the **0-200** time at 200 km/h. Faster than your log's best = green **BEST** / **NEW BEST**.
-- The run ends at 200 km/h, or when speed drops 10 km/h under its maximum (lift / brake): it is **SAVED** with
-  whatever splits it reached (needs at least 0-100). Stop for 3 s and it re-arms for the next run.
-- **LOG**: last 20 runs (0-100, 100-120, 120-160, 0-200, max speed; 160-200 is kept too), stored on the board.
+- The run ends at 200 km/h, or when speed drops 10 km/h under its maximum (lift / brake). Every run past
+  30 km/h is **SAVED**, whatever it reached: its top speed, the time to it (shown big, e.g. "0-144 KM/H 10.30"),
+  and the splits it passed. Stop for 3 s and it re-arms for the next run.
+- **LOG**: last 20 runs (0-100, 100-120, 120-160, 0-200, top speed @ time to it; 160-200 is kept too), stored on the board.
   Hold **HOLD TO CLEAR** for ~1 s to wipe it. Over serial: `timerlog` prints CSV, `timerlog=clear`.
 - Accuracy: OBD speed is whole km/h at a few Hz (the timer screen polls speed every other request), so expect
   about ±0.2 s. A 10 Hz GPS feeding `spd=` over SERIAL is better. For fun and comparing your own runs —

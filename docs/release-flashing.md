@@ -8,6 +8,7 @@
 | `…-invert-factory.bin` | **Start here.** Most CYD boards. ส่วนใหญ่ใช้ตัวนี้ |
 | `…-noinvert-factory.bin` | Colours look inverted (white background) with the file above. จอสีกลับด้าน พื้นขาว |
 | `…-invert-dim-factory.bin` | Same as *invert*, with BRIGHTNESS control, for boards whose backlight dims (if the screen goes black at 50 %, use *invert*). บอร์ดที่หรี่ไฟจอได้ |
+| `…-noinvert-dim-factory.bin` | Same as *noinvert*, with BRIGHTNESS control. จอสีปกติ + หรี่ไฟจอได้ |
 | `…-update.bin` | Upgrading a board that already runs REDLINE: keeps settings and the run log. อัปเดตโดยไม่ล้างค่าที่ตั้งไว้ |
 
 ## How to flash / วิธีแฟลช (no compiling needed / ไม่ต้องคอมไพล์)

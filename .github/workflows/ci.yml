@@ -24,7 +24,7 @@ jobs:
       - name: Unit tests (host)
         run: pio test -e native
       - name: Build firmware (both panel variants)
-        run: pio run -e esp32dev -e cyd-noinvert -e esp32dev-dim
+        run: pio run -e esp32dev -e cyd-noinvert -e esp32dev-dim -e cyd-noinvert-dim
       - name: Build with every my_sensors.cpp example enabled (PulseInput, ADC helpers)
         env:
           PLATFORMIO_BUILD_FLAGS: -DEXAMPLE_BATTERY_GPIO35=1 -DEXAMPLE_RPM_PULSE_GPIO22=1 -DEXAMPLE_FAKE_VALUES=1

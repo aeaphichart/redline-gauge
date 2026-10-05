@@ -196,7 +196,7 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
         case TS_RUN:      stateText = "RUN"; stateColor = T.good; break;
         case TS_FINISH:   stateText = "FINISH"; stateColor = T.good; break;
         case TS_SAVED:    stateText = "SAVED"; stateColor = T.good; break;
-        case TS_NO_RESULT:stateText = "NO 100"; stateColor = T.warning; break;
+        case TS_NO_RESULT:stateText = "TOO SHORT"; stateColor = T.warning; break;
     }
     drawStatus(stateText, stateColor);
 
@@ -212,9 +212,13 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
         snprintf(label, sizeof label, "0-200 KM/H");
         bigColor = T.good;
         if (t.newBest(SEG_0_200)) tag = "NEW BEST";
-    } else if (st == TS_SAVED || st == TS_NO_RESULT) {
+    } else if (st == TS_SAVED) {                         // didn't reach 200: time to its top speed
+        fmtSec(num, sizeof num, t.toMax());
+        snprintf(label, sizeof label, "0-%d KM/H  (TOP SPEED)", (int)lroundf(t.maxKmh()));
+        bigColor = 0xffffff;
+    } else if (st == TS_NO_RESULT) {
         fmtSec(num, sizeof num, -1);
-        snprintf(label, sizeof label, "0-200 KM/H  (MAX %d)", (int)lroundf(t.maxKmh()));
+        snprintf(label, sizeof label, "UNDER 30 KM/H - NOT LOGGED");
         bigColor = C_DIM;
     } else {
         snprintf(num, sizeof num, "0.00");
@@ -289,8 +293,8 @@ static void composeLog(const RunLog &log, float clearHold) {
     button(L_BACK, "BACK", T.accent, true);
     for (int x = 8; x < 312; x++) c.blendPixel(x, 30, C(T.accent), (uint8_t)(255 - (x - 8) * 200 / 304));
 
-    static const int cx[6] = { 12, 40, 98, 156, 214, 272 };
-    static const char *const hdr[6] = { "#", "0-100", "100-120", "120-160", "0-200", "MAX" };
+    static const int cx[6] = { 12, 36, 82, 128, 174, 220 };
+    static const char *const hdr[6] = { "#", "0-100", "100-120", "120-160", "0-200", "TOP @TIME" };
     static const Seg cols[4] = { SEG_0_100, SEG_100_120, SEG_120_160, SEG_0_200 };
     for (int k = 0; k < 6; k++) c.text(font_small, cx[k], 44, hdr[k], C(C_MUTED));
     c.fillRect(8, 48, 304, 1, C(C_EDGE));
@@ -311,7 +315,7 @@ static void composeLog(const RunLog &log, float clearHold) {
             uint32_t col = v == RUN_NONE ? C_DIM : v == best[k] ? T.good : 0xffffff;
             c.text(font_small, cx[k + 1], y, buf, C(col));
         }
-        snprintf(buf, sizeof buf, "%u", rec.maxKmh);
+        snprintf(buf, sizeof buf, "%u @%u.%01u", rec.maxKmh, rec.toMaxCs / 100, rec.toMaxCs % 100 / 10);
         c.text(font_small, cx[5], y, buf, C(0xffffff));
         c.fillRect(8, y + 7, 304, 1, C(0x1c252d));
     }

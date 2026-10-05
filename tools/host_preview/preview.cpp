@@ -95,6 +95,12 @@ static void timerFrames() {
     }
     shot("out/timer_finish.ppm");
     log.add(t.record());
+    for (int i = 0; i < 40; i++) { ms += 100; t.update(0, ms, ms, log); }   // stop: re-arms
+    v = 0;
+    while (v < 143) { ms += 100; v += 1.4f; t.update(v, ms, ms, log); }    // lift at ~143
+    ms += 100; t.update(128, ms, ms, log);
+    shot("out/timer_saved.ppm");
+    log.add(t.record());
     timer_ui::drawLog(log);
     save("out/timer_log.ppm");
 }
