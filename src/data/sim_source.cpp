@@ -45,7 +45,8 @@ static const int kPhases = sizeof(kScript) / sizeof(kScript[0]);
 // Drag timer screen open: stage at a stop, launch flat out shifting at the limiter, run
 // past 200 km/h (the timer's last split), lift, brake to a stop, repeat.
 static const Phase kDrag[] = {
-    { P_IDLE,     0, 0.00f,         0,  4 },   // staged: the timer arms after 1 s still
+    { P_BRAKE,    0, 0.60f,         0, 25 },   // opened mid-drive / after a run: stop first
+    { P_IDLE,     0, 0.00f,         0,  3 },   // READY at the line
     { P_ACCEL,  205, 1.00f, RPM_MAX - 350, 40 },
     { P_BRAKE,    0, 0.70f,         0, 25 },
 };
