@@ -17,6 +17,13 @@ static const float kLiftKmh    = 10;       // speed this far under the run's max
 static const float kMinLogKmh  = 30;       // a run must get past this to be logged
 static const float kStallMs    = 3000;     // no new top speed for this long (cruising) ends it
 
+// Signed age: the sample may carry a stamp a few ms AHEAD of `now` (published on the data
+// core after the UI read its clock). Unsigned maths made that look 49 days old - the run was
+// "discarded" the instant it started and READY was armed twice.
+static bool freshSample(uint32_t stamp, uint32_t now) {
+    return stamp && (int32_t)(now - stamp) < (int32_t)DATA_STALE_MS;
+}
+
 // ---- log -------------------------------------------------------------------------------
 void RunLog::add(RunRecord r) {
     r.seq = nextSeq++;
@@ -72,6 +79,12 @@ double DragTimer::segEnd(int seg) const {
 
 bool DragTimer::segDone(int seg) const { return segBegin(seg) >= 0 && segEnd(seg) >= 0; }
 
+float DragTimer::segAge(int seg, uint32_t now) const {
+    if (!segDone(seg)) return -1;
+    double age = (now - segEnd(seg)) / 1000.0;
+    return age < 0 ? 0 : (float)age;
+}
+
 bool DragTimer::segActive(int seg) const {
     return state_ == TS_RUN && segBegin(seg) >= 0 && segEnd(seg) < 0;
 }
@@ -120,8 +133,7 @@ TimerEvent DragTimer::end(const RunLog &log) {
 // while READY starts the clock at that exact moment, which is what "0-100 from when I hit
 // the throttle" means. Sources without throttle start on the first movement instead.
 TimerEvent DragTimer::throttle(float pct, uint32_t stamp, uint32_t now) {
-    bool fresh = stamp && now - stamp <= DATA_STALE_MS;
-    if (!fresh || stamp == lastThrStamp_) return TE_NONE;
+    if (!freshSample(stamp, now) || stamp == lastThrStamp_) return TE_NONE;
     lastThrStamp_ = stamp;
     bool pressed = pct >= kThrStart, was = lastThr_ >= kThrStart;
     lastThr_ = pct;
@@ -135,8 +147,7 @@ TimerEvent DragTimer::throttle(float pct, uint32_t stamp, uint32_t now) {
 }
 
 TimerEvent DragTimer::update(float v, uint32_t stamp, uint32_t now, const RunLog &log) {
-    bool stale = !stamp || now - stamp > DATA_STALE_MS;
-    if (stale) {
+    if (!freshSample(stamp, now)) {
         if (state_ == TS_RUN) return end(log);        // speed vanished mid-run
         if (!hasResult() && state_ != TS_NO_RESULT) state_ = TS_NO_SPEED;
         return TE_NONE;

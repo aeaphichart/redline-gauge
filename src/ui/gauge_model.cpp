@@ -4,8 +4,10 @@
 #include <math.h>
 #include <stdio.h>
 
+// Signed age: a sample the data core published a moment AFTER `now` was read is fresh
+// (unsigned maths called it 49 days old and blanked the value for one frame).
 static bool fresh(const GaugeSnapshot &s, Channel ch, uint32_t now) {
-    return s.stamp[ch] && (now - s.stamp[ch]) < DATA_STALE_MS;
+    return s.stamp[ch] && (int32_t)(now - s.stamp[ch]) < (int32_t)DATA_STALE_MS;
 }
 
 // Exponential approach with a time constant, frame-rate independent.

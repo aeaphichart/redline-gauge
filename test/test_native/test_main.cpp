@@ -464,6 +464,196 @@ static void test_timer_ui_renders_every_state() {
     TEST_ASSERT_EQUAL(timer_ui::ACT_LOG, timer_ui::tapTimer(230, 229, d.t));
 }
 
+// The owner's flow: open -> READY at once -> clock starts when the speed leaves 0 -> every
+// threshold stamps its box (TE_SPLIT) -> 200 finishes -> the run is logged -> stop -> READY.
+static void test_drag_timer_owner_flow() {
+    DragSim d;
+    d.t.again();
+    TEST_ASSERT_EQUAL(TE_ARMED, d.feed(0));                         // first stopped sample: ready
+    TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
+    TEST_ASSERT_EQUAL(TE_NONE, d.feed(0));
+    TEST_ASSERT_EQUAL(TE_START, d.feed(2, 100, false));             // speed leaves 0: clock starts
+    TEST_ASSERT_TRUE(d.t.running());
+    TEST_ASSERT_TRUE(d.t.segActive(SEG_0_100));
+    TEST_ASSERT_TRUE(d.t.segActive(SEG_0_200));
+    TEST_ASSERT_FALSE(d.t.segDone(SEG_0_100));
+    TEST_ASSERT_TRUE(d.t.segAge(SEG_0_100, d.ms) < 0);
+    float v = 2;
+    int splits = 0;
+    TimerEvent ev = TE_NONE;
+    while (ev != TE_FINISH) {
+        v += 2;                                                      // 20 km/h per s
+        ev = d.feed(v, 100, false);
+        if (ev == TE_SPLIT) {
+            splits++;
+            if (splits == 1) {                                       // 100: its box is stamped now
+                TEST_ASSERT_TRUE(d.t.segDone(SEG_0_100));
+                TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, d.t.segAge(SEG_0_100, d.ms));
+                TEST_ASSERT_FLOAT_WITHIN(0.06f, 5.0f, d.t.segTime(SEG_0_100, d.ms));   // launch back-estimated to the last 0 sample
+                TEST_ASSERT_TRUE(d.t.segActive(SEG_100_120));        // next box being chased
+            }
+            if (splits == 2) TEST_ASSERT_TRUE(d.t.segDone(SEG_100_120));
+            if (splits == 3) TEST_ASSERT_TRUE(d.t.segDone(SEG_120_160));
+        }
+    }
+    TEST_ASSERT_EQUAL(3, splits);
+    TEST_ASSERT_EQUAL(TS_FINISH, d.t.state());
+    TEST_ASSERT_TRUE(d.t.segDone(SEG_0_200));
+    TEST_ASSERT_UINT16_WITHIN(6, 1000, d.t.record().cs[SEG_0_200]);
+    TEST_ASSERT_UINT16_WITHIN(5, 100, d.t.record().cs[SEG_100_120]);
+    d.log.add(d.t.record());
+    TEST_ASSERT_EQUAL(1, d.log.count);
+    TEST_ASSERT_EQUAL_UINT16(200, d.log.runs[0].maxKmh);
+    for (int i = 0; i < 3; i++) d.feed(v -= 60);                     // braking
+    TEST_ASSERT_EQUAL(TS_FINISH, d.t.state());                      // result stays up
+    TEST_ASSERT_EQUAL(TE_ARMED, d.feed(0));                         // stopped: ready again
+    TEST_ASSERT_EQUAL(TS_STAGED, d.t.state());
+}
+
+// A sample published on the data core a few ms AFTER the UI read its clock has a stamp
+// ahead of `now`. That is fresh data: it must not end the run (it did: "discarded, top 0")
+// nor blank the value for a frame (the flicker).
+static void test_stamp_ahead_of_now_is_fresh() {
+    DragSim d;
+    d.t.again();
+    d.feed(0);
+    d.feed(5, 100, false);
+    TEST_ASSERT_TRUE(d.t.running());
+    d.ms += 40;
+    TEST_ASSERT_EQUAL(TE_NONE, d.t.update(8, d.ms + 3, d.ms, d.log));    // stamp 3 ms ahead
+    TEST_ASSERT_TRUE(d.t.running());
+    TEST_ASSERT_EQUAL(TE_NONE, d.t.update(8, d.ms + 3, d.ms + 10, d.log)); // same sample again
+    d.ms += 40;
+    TEST_ASSERT_EQUAL(TE_NONE, d.t.update(12, d.ms, d.ms, d.log));
+    TEST_ASSERT_TRUE(d.t.running());
+    // while READY the same glitch must not re-arm (it beeped READY twice)
+    DragSim e;
+    e.t.again();
+    TEST_ASSERT_EQUAL(TE_ARMED, e.feed(0));
+    e.ms += 40;
+    TEST_ASSERT_EQUAL(TE_NONE, e.t.update(0, e.ms + 2, e.ms, e.log));
+    TEST_ASSERT_EQUAL(TS_STAGED, e.t.state());
+    // the gauge model: a stamp ahead of now is valid data
+    GaugeModel m; GaugeView v;
+    GaugeSnapshot s = {};
+    g_host_ms = 90000;
+    m.reset(g_host_ms);
+    s.value[CH_SPEED] = 42; s.stamp[CH_SPEED] = g_host_ms + 2;
+    s.value[CH_RPM] = 3000; s.stamp[CH_RPM] = g_host_ms + 2;
+    m.update(s, g_host_ms, "T", v);
+    TEST_ASSERT_TRUE(v.speedValid);
+    TEST_ASSERT_TRUE(v.rpmValid);
+    s.stamp[CH_SPEED] = g_host_ms - DATA_STALE_MS - 1;
+    m.update(s, g_host_ms, "T", v);
+    TEST_ASSERT_FALSE(v.speedValid);
+}
+
+// SIM AUTO with the timer open, driven exactly like main.cpp (sim polled on its own clock,
+// the UI samples the bus at 60 fps): the car is put at the line at a dead stop, launches,
+// every split is stamped, 200 finishes the run; a restart mid-run puts it back at the line.
+static void test_sim_drag_launch_from_line() {
+    SimSource sim(false);
+    DragTimer t; RunLog log; log.clear();
+    g_host_ms = 1000;
+    sim.begin();
+    for (int i = 0; i < 2000; i++) { g_host_ms += 10; sim.poll(); }   // street loop for 20 s
+    GaugeSnapshot s;
+    bus::snapshot(s);
+    TEST_ASSERT_TRUE(s.value[CH_SPEED] > 20);                        // mid-drive when opened
+    t.again();
+    SimSource::dragMode = true;
+    SimSource::restartDrag = true;
+    uint32_t opened = g_host_ms, started = 0, finished = 0;
+    int splits = 0, zeroSamples = 0;
+    bool wasReady = false;
+    auto frame = [&]() {                                             // one UI frame
+        bus::snapshot(s);
+        return t.update(s.value[CH_SPEED], s.stamp[CH_SPEED], g_host_ms, log);
+    };
+    for (int i = 0; i < 6000 && !finished; i++) {
+        g_host_ms += 16;
+        sim.poll();
+        TimerEvent ev = frame();
+        if (t.state() == TS_STAGED) { wasReady = true; if (s.value[CH_SPEED] == 0) zeroSamples++; }
+        if (ev == TE_START) started = g_host_ms;
+        if (ev == TE_SPLIT) splits++;
+        if (ev == TE_FINISH) finished = g_host_ms;
+        if (ev == TE_SAVED || ev == TE_DISCARD) TEST_FAIL_MESSAGE("run ended early");
+    }
+    TEST_ASSERT_TRUE(wasReady);
+    TEST_ASSERT_TRUE(zeroSamples > 100);                             // parked at exactly 0 km/h
+    TEST_ASSERT_TRUE(started && started - opened < 6000);            // launches within 6 s
+    TEST_ASSERT_TRUE(finished);
+    TEST_ASSERT_EQUAL(3, splits);
+    const RunRecord &r = t.record();
+    TEST_ASSERT_TRUE(r.cs[SEG_0_100] > 500 && r.cs[SEG_0_100] < 900);   // 5-9 s: a 2.0 turbo
+    TEST_ASSERT_TRUE(r.cs[SEG_0_200] > 1500 && r.cs[SEG_0_200] < 3500);
+    TEST_ASSERT_EQUAL_UINT16(200, r.maxKmh);
+    log.add(r);
+    // the next run starts by itself: the sim brakes to a stop, idles, launches again
+    bool readyAgain = false, ranAgain = false;
+    for (int i = 0; i < 4000 && !ranAgain; i++) {
+        g_host_ms += 16;
+        sim.poll();
+        TimerEvent ev = frame();
+        if (ev == TE_ARMED) readyAgain = true;
+        if (ev == TE_START) ranAgain = true;
+    }
+    TEST_ASSERT_TRUE(readyAgain);
+    TEST_ASSERT_TRUE(ranAgain);
+    // AGAIN mid-run: the car is back at the line within a few samples and a full run follows
+    for (int i = 0; i < 300; i++) { g_host_ms += 16; sim.poll(); frame(); }   // ~5 s into the run
+    TEST_ASSERT_TRUE(t.running());
+    t.again();
+    SimSource::restartDrag = true;
+    bool ready = false;
+    for (int i = 0; i < 20 && !ready; i++) { g_host_ms += 16; sim.poll(); ready = frame() == TE_ARMED; }
+    TEST_ASSERT_TRUE(ready);
+    finished = 0;
+    for (int i = 0; i < 4000 && !finished; i++) { g_host_ms += 16; sim.poll(); if (frame() == TE_FINISH) finished = 1; }
+    TEST_ASSERT_TRUE(finished);
+    SimSource::dragMode = false;
+    SimSource::restartDrag = false;
+}
+
+// The timer screen pushes only what changed: a speed digit, the clock's last digits, the
+// moving edge of the bar, a progress strip. Whole-region pushes at 60 fps tore on the panel.
+static void test_timer_ui_partial_pushes() {
+    gauge_ui::begin(push, kThemes[0]);
+    DragSim d;
+    d.t.again();
+    d.feed(0);
+    timer_ui::invalidate();
+    timer_ui::render(d.t, d.log, d.ms, true);                       // READY, full paint
+    float v = 0;
+    while (v < 90) { v += 3; d.feed(v, 100, false); }
+    timer_ui::render(d.t, d.log, d.ms, true);
+    uint16_t full[320 * 240];
+    // a frame where only the clock ticked: just a digit cell or two moves
+    pushedPx = 0;
+    timer_ui::render(d.t, d.log, d.ms + 10, true);
+    TEST_ASSERT_TRUE_MESSAGE(pushedPx > 0 && pushedPx < 60 * 28, "clock tick pushed too much");
+    // speed 90 -> 91: one big digit cell (plus the clock / bar / strips), far under the big region
+    d.feed(91, 100, false);
+    pushedPx = 0;
+    timer_ui::render(d.t, d.log, d.ms, true);
+    TEST_ASSERT_TRUE_MESSAGE(pushedPx < 196 * 51 / 2, "speed digit pushed the whole region");
+    // and the partial frames are pixel-identical to a full repaint
+    memcpy(full, fb, sizeof fb);
+    timer_ui::invalidate();
+    timer_ui::render(d.t, d.log, d.ms, true);
+    TEST_ASSERT_EQUAL_MEMORY(full, fb, sizeof fb);
+    // a split stamps its box: a full box repaint, then the strip only
+    while (d.feed(v += 3, 100, false) != TE_SPLIT) {}
+    timer_ui::render(d.t, d.log, d.ms, true);
+    memcpy(full, fb, sizeof fb);
+    timer_ui::invalidate();
+    timer_ui::render(d.t, d.log, d.ms, true);
+    TEST_ASSERT_EQUAL_MEMORY(full, fb, sizeof fb);
+    TEST_ASSERT_TRUE(fontHas(font_small, "LAUNCH TO START NEXT 100 KM/H BEST 0-200 STOP TO ARM TOO SHORT"));
+    TEST_ASSERT_TRUE(fontHas(font_label, "0-200 KM/H TIME 0-144"));
+}
+
 // ---- Honda K-line ------------------------------------------------------------------------------
 static void test_honda_kline_frames() {
     // fixed frames from the protocol references must checksum to zero
@@ -789,6 +979,10 @@ int main(int, char **) {
     RUN_TEST(test_drag_timer_throttle_start);
     RUN_TEST(test_run_log);
     RUN_TEST(test_timer_ui_renders_every_state);
+    RUN_TEST(test_drag_timer_owner_flow);
+    RUN_TEST(test_stamp_ahead_of_now_is_fresh);
+    RUN_TEST(test_sim_drag_launch_from_line);
+    RUN_TEST(test_timer_ui_partial_pushes);
     RUN_TEST(test_model_hybrid_panels_and_gear_off);
     RUN_TEST(test_gear_estimate);
     RUN_TEST(test_model_levels_and_shift);

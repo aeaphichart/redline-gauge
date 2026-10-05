@@ -641,6 +641,7 @@ void loop() {
 
     GaugeSnapshot snap;
     bus::snapshot(snap);
+    now = millis();          // read AFTER the snapshot: no stamp in it can be newer than `now`
     model.update(snap, now, src >= 0 ? sources[src]->name() : "", view);
 
     if (screen == SCR_GAUGE) {
@@ -648,17 +649,33 @@ void loop() {
         updateOutputs(&view);
         pushes += gauge_ui::lastPushedRegions();
     } else if (screen == SCR_TIMER) {
+        // Timer sounds play even with BEEP off: they are the feedback this screen is for.
+        static const char *const segNames[4] = { "0-100", "100-120", "120-160", "0-200" };
+        static const Seg segIds[4] = { SEG_0_100, SEG_100_120, SEG_120_160, SEG_0_200 };
+        static bool announced[4];                    // split boxes already printed this run
+        auto printSplits = [&]() {
+            for (int i = 0; i < 4; i++)
+                if (!announced[i] && dragTimer.segDone(segIds[i])) {
+                    announced[i] = true;
+                    Serial.printf("[timer] %s stamped %.2f s\n", segNames[i], dragTimer.segTime(segIds[i], now));
+                }
+        };
         switch (dragTimer.update(snap.value[CH_SPEED], snap.stamp[CH_SPEED], now, runLog)) {
-            case TE_ARMED: beep(1500, 40); Serial.println("[timer] READY"); break;
-            case TE_START: beep(2200, 50); Serial.printf("[timer] START at %.1f km/h\n", snap.value[CH_SPEED]); break;
-            case TE_SPLIT: beep(2800, 70); Serial.printf("[timer] split at %.1f km/h, %.2f s\n", snap.value[CH_SPEED], dragTimer.elapsed(now)); break;
+            case TE_ARMED: beep(1500, 40, true); Serial.println("[timer] READY"); break;
+            case TE_START:
+                beep(2200, 50, true);
+                memset(announced, 0, sizeof announced);
+                Serial.printf("[timer] START at %.1f km/h\n", snap.value[CH_SPEED]);
+                break;
+            case TE_SPLIT: beep(2800, 70, true); printSplits(); break;
             case TE_FINISH:
             case TE_SAVED: {
                 bool best = false;
                 for (int s = 0; s < SEG_COUNT; s++) best |= dragTimer.newBest(s);
+                printSplits();                       // 200 stamps 0-200 in the same sample
                 runLog.add(dragTimer.record());
                 saveRunLog();
-                beep(best ? 3400 : 2600, best ? 400 : 200);
+                beep(best ? 3400 : 2600, best ? 400 : 200, true);
                 const RunRecord &r = runLog.runs[0];
                 Serial.printf("[timer] run %u saved: top %u km/h in %u.%02u s, 0-100 %s, 0-200 %s%s\n", r.seq,
                               r.maxKmh, r.toMaxCs / 100, r.toMaxCs % 100,
@@ -667,7 +684,7 @@ void loop() {
                               best ? "  NEW BEST" : "");
                 break;
             }
-            case TE_DISCARD: beep(900, 150); Serial.printf("[timer] run discarded (top %.0f km/h)\n", dragTimer.maxKmh()); break;
+            case TE_DISCARD: beep(900, 150, true); Serial.printf("[timer] run discarded (top %.0f km/h)\n", dragTimer.maxKmh()); break;
             default: break;
         }
         timer_ui::render(dragTimer, runLog, now, view.speedValid);

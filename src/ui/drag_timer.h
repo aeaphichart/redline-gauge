@@ -3,12 +3,13 @@
 // (160-200 is kept for the log too). No drawing and no hardware here: it is fed the raw
 // speed samples (value + the time they were published) and runs identically on the host.
 //
-//   wait  -> car stopped                   -> STAGED ("READY")
-//   STAGED -> throttle pressed (if the source reports it), else speed leaves 0
-//                                          -> RUN (throttle: exact start; speed: start
-//                                             back-estimated from the first two samples)
-//   RUN   -> 200 km/h                      -> FINISH
-//   RUN   -> speed drops 10 below its max, or no new top speed for 3 s (cruising)
+//   open   -> car stopped (or stops)       -> STAGED ("READY!!")  at once, no hold time
+//   STAGED -> speed leaves 0               -> RUN  (launch back-estimated from the first
+//                                             two moving samples; a throttle sample can
+//                                             start it earlier, see throttle())
+//   RUN    -> 100 / 120 / 160 / 200 km/h   -> TE_SPLIT: the segment ending there is stamped
+//   RUN    -> 200 km/h                     -> FINISH
+//   RUN    -> speed drops 10 below its max, or no new top speed for 3 s (cruising)
 //                                          -> SAVED with whatever it reached (top speed +
 //                                             time to it, and every split passed); runs that
 //                                             never got past 30 km/h are not logged
@@ -48,8 +49,10 @@ public:
     static const int kThresholds = 4;
     static constexpr float kTh[kThresholds] = { 100, 120, 160, 200 };
 
-    void again();                               // drop any result, wait for a stop
-    // Call every frame with the newest speed sample (stamp 0 = no data yet).
+    void again();                               // drop any result / run, wait for a stop
+    // Call every frame with the newest speed sample (stamp 0 = no data yet). `now` may be a
+    // hair older than `stamp` (the sample was published on the other core after `now` was
+    // read): that counts as fresh, never as stale.
     TimerEvent update(float kmh, uint32_t stamp, uint32_t now, const RunLog &log);
     // Optional: the throttle channel. While READY, pressing it (>= 10 %) starts the clock.
     TimerEvent throttle(float pct, uint32_t stamp, uint32_t now);
@@ -61,6 +64,7 @@ public:
     float segTime(int seg, uint32_t now) const; // s; live for the active segment; <0 = not started
     bool  segDone(int seg) const;
     bool  segActive(int seg) const;             // being timed right now
+    float segAge(int seg, uint32_t now) const;  // s since the segment was stamped, <0 = not yet
     float segProgress(int seg) const;           // 0..1 by speed, for the panel bars
     bool  newBest(int seg) const { return newBest_[seg]; }
     float speed() const { return lastV_; }

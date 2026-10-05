@@ -16,5 +16,6 @@ Action tapTimer(int x, int y, const DragTimer &t);
 
 void   drawLog(const RunLog &log);                    // CLEAR asks CONFIRM / CANCEL first
 Action tapLog(int x, int y);
+bool   logConfirming();                               // CLEAR tapped, CONFIRM / CANCEL shown
 
 }

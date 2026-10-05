@@ -191,22 +191,25 @@ Check the labels printed next to each connector first — the pin order differs 
 
 SETUP → **TIMER** (or `timer` over serial). Works with any source that delivers speed (OBD, SERIAL / GPS, CUSTOM, SIM).
 
-| Running | Finish | Run log |
-|---|---|---|
-| ![timer running](docs/timer-run.png) | ![timer finish](docs/timer-finish.png) | ![run log](docs/timer-log.png) |
+| Ready | Running | Finish | Run log |
+|---|---|---|---|
+| ![timer ready](docs/timer-ready.png) | ![timer running](docs/timer-run.png) | ![timer finish](docs/timer-finish.png) | ![run log](docs/timer-log.png) |
 
-- Stop the car: the bar shows three amber lights (**READY**) right away.
-  - With a throttle signal (SIM, HONDA K, SERIAL `tps=`), the clock starts the moment you press the throttle.
-  - Otherwise (OBD), it starts on the first movement, back-estimated from the first samples.
-  - Every threshold crossing is interpolated between two speed samples.
-  - While READY, the panels keep showing the last run.
-- Splits on the right: **0-100**, **100-120**, **120-160** (a beep at each); the big number is the running clock
-  and becomes the **0-200** time at 200 km/h. Faster than your log's best = green **BEST** / **NEW BEST**.
-- The run ends at 200 km/h, or when speed drops 10 km/h under its maximum (lift / brake). Every run past
-  30 km/h is **SAVED**, whatever it reached: its top speed, the time to it (shown big, e.g. "0-144 KM/H 10.30"),
-  and the splits it passed. Stop for 3 s and it re-arms for the next run.
-- **LOG**: last 20 runs (0-100, 100-120, 120-160, 0-200, top speed @ time to it; 160-200 is kept too), stored on the board.
-  Hold **HOLD TO CLEAR** for ~1 s to wipe it. Over serial: `timerlog` prints CSV, `timerlog=clear`.
+- Open it with the car stopped and it is armed at once: a big flashing **READY!!** and three amber lights.
+  (Rolling: **STOP TO ARM**.) The boxes keep showing your last run.
+- The clock (**TIME**, bottom row) starts the moment the speed leaves 0, back-estimated from the first
+  samples, and the big number is the live speed.
+- Reach 100 km/h and the **0-100** box is stamped with its time (a beep, the box flashes amber); 120 stamps
+  **100-120**, 160 stamps **120-160**, 200 stamps **0-200** and finishes the run. The box being chased is
+  highlighted with a bar that fills with speed. Faster than your log's best = green **BEST** / **NEW BEST**.
+- A run that never gets to 200 ends when the speed drops 10 km/h under its maximum (lift / brake) or stops
+  climbing for 3 s. Every run past 30 km/h is **SAVED** with whatever it reached: top speed, the time to it
+  (e.g. "0-144 10.30 SEC") and every split it passed. Stop and it re-arms for the next run.
+- **LOG**: last 20 runs (0-100, 100-120, 120-160, 0-200, top speed @ time to it; 160-200 is kept too), stored on
+  the board. **CLEAR LOG** asks **CONFIRM CLEAR** / **CANCEL**. Over serial: `timerlog` prints CSV, `timerlog=clear`;
+  the timer also logs READY / START / every stamp / saved runs as `[timer]` lines.
+- SIM AUTO: opening the timer puts the car at the line; it launches by itself, runs to 200, brakes back to the
+  line and goes again.
 - Accuracy: OBD speed is whole km/h at a few Hz (the timer screen polls speed every other request), so expect
   about ±0.2 s. A 10 Hz GPS feeding `spd=` over SERIAL is better. For fun and comparing your own runs —
   do it on a track, not on public roads.

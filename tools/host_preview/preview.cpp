@@ -81,29 +81,36 @@ static void timerFrames() {
     uint32_t ms = 10000;
     t.again();
     auto shot = [&](const char *path) { timer_ui::invalidate(); timer_ui::render(t, log, ms, true); save(path); };
-    for (int i = 0; i < 8; i++) { ms += 200; t.update(0, ms, ms, log); }
-    ms += 600;                                           // READY!! blink phase: on
-    shot("out/timer_staged.ppm");
+    ms += 200; t.update(0, ms, ms, log);                 // first stopped sample: READY at once
+    ms += 200;                                           // READY!! blink phase: on (ms/400 even)
+    shot("out/timer_ready.ppm");
     float v = 0;
-    bool s1 = false, s2 = false;
+    bool s1 = false, s2 = false, s3 = false;
     while (t.state() != TS_FINISH) {
         ms += 100;
         float a = v < 100 ? 15.5f : v < 160 ? 9.5f : 6.0f;   // km/h per s
         v += a * 0.1f;
-        t.update(v, ms, ms, log);
+        TimerEvent ev = t.update(v, ms, ms, log);
         if (!s1 && v >= 90)  { shot("out/timer_run.ppm"); s1 = true; }
-        if (!s2 && v >= 144) { shot("out/timer_run2.ppm"); s2 = true; }
+        if (!s2 && ev == TE_SPLIT && v >= 100 && v < 120) { ms += 150; shot("out/timer_stamp.ppm"); s2 = true; }
+        if (!s3 && v >= 144) { shot("out/timer_run2.ppm"); s3 = true; }
     }
+    ms += 1000;                                          // flash over: boxes settle
     shot("out/timer_finish.ppm");
     log.add(t.record());
     for (int i = 0; i < 40; i++) { ms += 100; t.update(0, ms, ms, log); }   // stop: re-arms
     v = 0;
     while (v < 143) { ms += 100; v += 1.4f; t.update(v, ms, ms, log); }    // lift at ~143
     ms += 100; t.update(128, ms, ms, log);
+    ms += 1000;
     shot("out/timer_saved.ppm");
     log.add(t.record());
     timer_ui::drawLog(log);
     save("out/timer_log.ppm");
+    timer_ui::tapLog(60, 224);                           // CLEAR LOG -> asks to confirm
+    timer_ui::drawLog(log);
+    save("out/timer_log_confirm.ppm");
+    timer_ui::tapLog(238, 224);                          // CANCEL
 }
 
 int main() {

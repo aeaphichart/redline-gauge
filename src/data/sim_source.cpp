@@ -46,7 +46,7 @@ static const int kPhases = sizeof(kScript) / sizeof(kScript[0]);
 // Drag timer screen open: stage at a stop, launch flat out shifting at the limiter, run
 // past 200 km/h (the timer's last split), lift, brake to a stop, repeat.
 static const Phase kDrag[] = {
-    { P_IDLE,     0, 0.00f,         0,  3 },   // READY at the line (the car is put at a stop
+    { P_IDLE,     0, 0.00f,         0,  4 },   // READY at the line (the car is put at a stop
                                                // when the timer opens)
     { P_ACCEL,  205, 1.00f, RPM_MAX - 350, 40 },
     { P_BRAKE,    0, 0.70f,         0, 25 },   // back to the line, then the next run
@@ -207,7 +207,9 @@ void SimSource::step(float dt) {
     float drag = 0.5f * 1.2f * 0.68f * speed_ * speed_ + (speed_ > 0.05f ? 0.013f * 1250 * 9.81f : 0);
     float brakeF = brake * 9500.0f * (speed_ > 0.05f ? 1 : 0);
     speed_ += (drive - drag - brakeF) / kMass * dt;
-    if (speed_ < 0) speed_ = 0;
+    // Dead stop: below walking pace with nothing pushing, the car is parked at exactly 0
+    // (otherwise it crept at 0.2-1 km/h for seconds and the timer saw a false launch).
+    if (speed_ < 0 || (speed_ < 0.15f && drive <= 0)) speed_ = 0;
 
     // ---- thermal & electrical ----
     float load = throttle_ * rpm_ / RPM_MAX;
