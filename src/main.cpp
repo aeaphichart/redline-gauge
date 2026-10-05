@@ -658,9 +658,7 @@ void loop() {
         updateOutputs(&view);
         pushes += gauge_ui::lastPushedRegions();
     } else if (screen == SCR_TIMER) {
-        TimerEvent te = dragTimer.throttle(snap.value[CH_THROTTLE], snap.stamp[CH_THROTTLE], now);
-        if (te == TE_NONE) te = dragTimer.update(snap.value[CH_SPEED], snap.stamp[CH_SPEED], now, runLog);
-        switch (te) {
+        switch (dragTimer.update(snap.value[CH_SPEED], snap.stamp[CH_SPEED], now, runLog)) {
             case TE_ARMED: beep(1500, 40); break;
             case TE_START: beep(2200, 50); break;
             case TE_SPLIT: beep(2800, 70); break;

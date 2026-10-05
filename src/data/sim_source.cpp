@@ -45,18 +45,22 @@ static const int kPhases = sizeof(kScript) / sizeof(kScript[0]);
 // Drag timer screen open: stage at a stop, launch flat out shifting at the limiter, run
 // past 200 km/h (the timer's last split), lift, brake to a stop, repeat.
 static const Phase kDrag[] = {
-    { P_BRAKE,    0, 0.60f,         0, 25 },   // opened mid-drive / after a run: stop first
-    { P_IDLE,     0, 0.00f,         0,  3 },   // READY at the line
+    { P_IDLE,     0, 0.00f,         0,  3 },   // READY at the line (the car is put at a stop
+                                               // when the timer opens)
     { P_ACCEL,  205, 1.00f, RPM_MAX - 350, 40 },
-    { P_BRAKE,    0, 0.70f,         0, 25 },
+    { P_BRAKE,    0, 0.70f,         0, 25 },   // back to the line, then the next run
 };
 static const int kDragPhases = sizeof(kDrag) / sizeof(kDrag[0]);
 
 void SimSource::script(float dt, float &thr, float &brake, float &shiftAt) {
-    if (dragMode != inDrag_) {              // switch scripts at the next phase start
+    if (dragMode != inDrag_) {              // switch scripts
         inDrag_ = dragMode;
         phase_ = inDrag_ ? 0 : 1;
         phaseT_ = 0;
+        if (inDrag_) {                      // timer opened: start from a standstill at once
+            speed_ = 0; gear_ = 0; shiftTimer_ = 0; launching_ = false;
+            throttle_ = 0; rpm_ = RPM_IDLE;
+        }
     }
     const Phase *list = inDrag_ ? kDrag : kScript;
     int count = inDrag_ ? kDragPhases : kPhases;

@@ -24,6 +24,7 @@ static const Rect R_BAR     = {  8,  27, 200, 22 };
 static const Rect R_BIG_LBL = { 14,  62, 196, 15 };
 static const Rect R_BIG     = { 14,  77, 196, 51 };
 static const Rect R_SPEED   = { 18, 183, 174, 28 };
+static const Rect R_Z200    = { 14, 132, 196, 46 };   // 0-200 result row under the clock
 static const int  PANEL_TOP[3] = { 33, 102, 171 };
 static Rect panelRect(int i) { return { 226, PANEL_TOP[i] - 4, 88, 44 }; }
 static const Rect R_LOGBTN  = { 204, 221, 54, 17 };
@@ -34,7 +35,7 @@ static const Rect L_BACK  = { 250,   4,  64, 22 };
 static const Rect L_CLEAR = {   8, 212, 150, 24 };
 static const Rect L_NEW   = { 164, 212, 148, 24 };
 
-enum { RG_STATUS, RG_BAR, RG_LBL, RG_BIG, RG_SPEED, RG_P0, RG_P1, RG_P2, RG_LOGBTN, RG_BTN, RG_COUNT };
+enum { RG_STATUS, RG_BAR, RG_LBL, RG_BIG, RG_SPEED, RG_P0, RG_P1, RG_P2, RG_Z200, RG_LOGBTN, RG_BTN, RG_COUNT };
 static char s_key[RG_COUNT][72];
 
 #define C_STATUS 0xd9e2e7
@@ -110,7 +111,8 @@ static void drawBar(float pos, uint32_t color, int staged) {
     flush();
 }
 
-static void drawBig(const char *label, const char *right, const char *tag, const char *num, uint32_t color) {
+static void drawBig(const char *label, const char *right, const char *tag, const char *num, uint32_t color,
+                    const char *unit) {
     auto paint = [&]() {
         Canvas &c = cv();
         c.text(font_small, 19, 75, label, C(C_LABEL), ALIGN_LEFT, 1);
@@ -122,7 +124,7 @@ static void drawBig(const char *label, const char *right, const char *tag, const
             c.text(font_small, 206, 75, right, C(0x6f808b), ALIGN_RIGHT);
         }
         int w = c.text(font_timer, 18, 118, num, C(color), ALIGN_LEFT, 0, true);
-        c.text(font_small, 18 + w + 6, 118, "SEC", C(th().accentBright), ALIGN_LEFT, 1);
+        c.text(font_small, 18 + w + 6, 118, unit, C(th().accentBright), ALIGN_LEFT, 1);
     };
     char key[72];
     snprintf(key, sizeof key, "%s|%s|%s", label, right, tag);
@@ -131,20 +133,36 @@ static void drawBig(const char *label, const char *right, const char *tag, const
     if (changed(RG_BIG, key) && begin(R_BIG)) { paint(); flush(); }
 }
 
-static void drawSpeed(bool valid, int kmh) {
-    char num[8], key[72];
-    if (valid) snprintf(num, sizeof num, "%03d", kmh < 0 ? 0 : kmh > 999 ? 999 : kmh);
-    else snprintf(num, sizeof num, "---");
-    snprintf(key, sizeof key, "%s", num);
+// Bottom row: the clock (running time, or the result).
+static void drawTime(const char *label, const char *value, uint32_t color) {
+    char key[72];
+    snprintf(key, sizeof key, "%s|%s|%06x", label, value, (unsigned)color);
     if (!changed(RG_SPEED, key) || !begin(R_SPEED)) return;
     Canvas &c = cv();
-    c.text(font_label, 23, 203, "SPEED", C(th().accentBright), ALIGN_LEFT, 1);
-    int w = c.text(font_speed, 68, 207, num, C(valid ? 0xffffff : C_DIM), ALIGN_LEFT, 0, true);
-    c.text(font_small, 68 + w + 3, 207, "km/h", C(0xbac6cc));
+    c.text(font_label, 23, 203, label, C(th().accentBright), ALIGN_LEFT, 1);
+    int w = c.text(font_value, 78, 207, value, C(color), ALIGN_LEFT, 0, true);
+    c.text(font_small, 78 + w + 3, 207, "SEC", C(0xbac6cc));
     flush();
 }
 
 enum PanelState { PS_PENDING, PS_ACTIVE, PS_DONE, PS_BEST };
+
+// 0-200 row: same states as the panels, wide format under the big clock.
+static void drawZ200(const char *value, PanelState ps, float prog) {
+    int fill = (int)lroundf((prog < 0 ? 0 : prog > 1 ? 1 : prog) * 180);
+    char key[72];
+    snprintf(key, sizeof key, "%s|%d|%d", value, ps, fill);
+    if (!changed(RG_Z200, key) || !begin(R_Z200)) return;
+    Canvas &c = cv();
+    c.text(font_label, 19, 145, "0-200 KM/H", C(ps == PS_PENDING ? 0x6f808b : th().accentBright), ALIGN_LEFT, 1);
+    uint32_t vc = ps == PS_PENDING ? C_DIM : ps == PS_ACTIVE ? th().accentBright : ps == PS_BEST ? th().good : 0xffffff;
+    int w = c.text(font_value, 19, 168, value, C(vc), ALIGN_LEFT, 0, true);
+    c.text(font_small, 19 + w + 3, 168, "s", C(0xd1d9de));
+    if (ps == PS_BEST) c.text(font_small, 199, 168, "BEST", C(th().good), ALIGN_RIGHT);
+    c.fillRect(19, 172, 180, 3, C(C_TRACK));
+    if (fill > 0) c.fillRect(19, 172, fill, 3, C(ps >= PS_DONE ? th().good : th().accent));
+    flush();
+}
 
 static void drawPanel(int i, const char *label, const char *value, PanelState ps, float prog) {
     int fill = (int)lroundf((prog < 0 ? 0 : prog > 1 ? 1 : prog) * 76);
@@ -186,7 +204,7 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
     TimerState st = t.state();
     char num[12], right[24] = "", label[32];
     const char *stateText = "";
-    uint32_t stateColor = T.accentBright, bigColor = 0xffffff;
+    uint32_t stateColor = T.accentBright;
     const char *tag = "";
 
     switch (st) {
@@ -200,36 +218,43 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
     }
     drawStatus(stateText, stateColor);
 
-    // big number
+    // big number = live speed; bottom row = the clock
+    char tnum[12], tlabel[16] = "TIME";
+    uint32_t tColor = C_DIM;
+    fmtSec(tnum, sizeof tnum, 0);
+    int kmh = speedValid ? (int)lroundf(t.speed()) : -1;
+    if (kmh > 999) kmh = 999;
+    if (kmh >= 0) snprintf(num, sizeof num, "%d", kmh); else snprintf(num, sizeof num, "--");
+    snprintf(label, sizeof label, "SPEED");
     if (st == TS_RUN) {
-        fmtSec(num, sizeof num, t.elapsed(now));
-        snprintf(label, sizeof label, "TIME");
+        fmtSec(tnum, sizeof tnum, t.elapsed(now));
+        tColor = T.accentBright;
         int next = 0;
         while (next < 3 && t.segDone(next == 0 ? SEG_0_100 : next == 1 ? SEG_100_120 : SEG_120_160)) next++;
         snprintf(right, sizeof right, "TO %d KM/H", next == 0 ? 100 : next == 1 ? 120 : next == 2 ? 160 : 200);
     } else if (st == TS_FINISH) {
-        fmtSec(num, sizeof num, t.segTime(SEG_0_200, now));
-        snprintf(label, sizeof label, "0-200 KM/H");
-        bigColor = T.good;
+        fmtSec(tnum, sizeof tnum, t.segTime(SEG_0_200, now));
+        snprintf(tlabel, sizeof tlabel, "0-200");
+        tColor = T.good;
         if (t.newBest(SEG_0_200)) tag = "NEW BEST";
+        else snprintf(right, sizeof right, "FINISH");
     } else if (st == TS_SAVED) {                         // didn't reach 200: time to its top speed
-        fmtSec(num, sizeof num, t.toMax());
-        snprintf(label, sizeof label, "0-%d KM/H  (TOP SPEED)", (int)lroundf(t.maxKmh()));
-        bigColor = 0xffffff;
+        fmtSec(tnum, sizeof tnum, t.toMax());
+        snprintf(tlabel, sizeof tlabel, "0-%d", (int)lroundf(t.maxKmh()));
+        tColor = 0xffffff;
+        snprintf(right, sizeof right, "TOP %d KM/H", (int)lroundf(t.maxKmh()));
     } else if (st == TS_NO_RESULT) {
-        fmtSec(num, sizeof num, -1);
-        snprintf(label, sizeof label, "UNDER 30 KM/H - NOT LOGGED");
-        bigColor = C_DIM;
+        fmtSec(tnum, sizeof tnum, -1);
+        snprintf(right, sizeof right, "UNDER 30 - NOT LOGGED");
     } else {
-        snprintf(num, sizeof num, "0.00");
-        bigColor = C_DIM;
-        snprintf(label, sizeof label, st == TS_STAGED ? "HIT THROTTLE" : st == TS_MOVING ? "STOP TO ARM"
-                                                                            : "NO SPEED YET");
+        snprintf(label, sizeof label, st == TS_STAGED ? "READY - LAUNCH" : st == TS_MOVING ? "STOP TO ARM"
+                                                                           : "NO SPEED YET");
         uint16_t b200 = log.best(SEG_0_200), b100 = log.best(SEG_0_100);
         if (b200 != RUN_NONE) snprintf(right, sizeof right, "BEST 0-200 %u.%02u", b200 / 100, b200 % 100);
         else if (b100 != RUN_NONE) snprintf(right, sizeof right, "BEST 0-100 %u.%02u", b100 / 100, b100 % 100);
     }
-    drawBig(label, right, tag, num, bigColor);
+    drawBig(label, right, tag, num, kmh >= 0 ? 0xffffff : C_DIM, "KM/H");
+    drawTime(tlabel, tnum, tColor);
 
     // bar: staging lights, live speed toward 200, or the result
     if (st == TS_STAGED) drawBar(0, T.accent, 3);
@@ -239,7 +264,6 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
         drawBar(SLOT_COUNT * (v > 200 ? 1 : v / 200), T.accent, 0);
     } else drawBar(0, T.accent, 0);
 
-    drawSpeed(speedValid, (int)lroundf(t.speed()));
 
     static const Seg kPanelSeg[3] = { SEG_0_100, SEG_100_120, SEG_120_160 };
     static const char *const kPanelLbl[3] = { "0-100", "100-120", "120-160" };
@@ -257,6 +281,19 @@ void render(const DragTimer &t, const RunLog &log, uint32_t now, bool speedValid
         }
         fmtSec(num, sizeof num, tm);
         drawPanel(i, kPanelLbl[i], num, ps, showing ? t.segProgress(s) : 0);
+    }
+    {
+        PanelState ps = PS_PENDING;
+        float tm = -1;
+        if (showing) {
+            if (t.segDone(SEG_0_200)) { ps = t.newBest(SEG_0_200) ? PS_BEST : PS_DONE; tm = t.segTime(SEG_0_200, now); }
+            else if (t.segActive(SEG_0_200)) { ps = PS_ACTIVE; tm = t.segTime(SEG_0_200, now); }
+        } else if (log.count && log.runs[0].cs[SEG_0_200] != RUN_NONE) {
+            ps = PS_DONE;
+            tm = log.runs[0].cs[SEG_0_200] / 100.0f;
+        }
+        fmtSec(num, sizeof num, tm);
+        drawZ200(num, ps, showing ? t.segProgress(SEG_0_200) : 0);
     }
 
     smallButton(RG_LOGBTN, R_LOGBTN, "LOG", st != TS_RUN);
