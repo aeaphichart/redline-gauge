@@ -12,7 +12,28 @@
 
 ## How to flash / วิธีแฟลช (no compiling needed / ไม่ต้องคอมไพล์)
 
-**In the browser (Chrome / Edge):**
+**REDLINE Flasher (easiest):** download `REDLINE-Flasher-windows.exe` from the
+[latest release](https://github.com/moomdate/redline-gauge/releases/latest) (macOS / Linux builds are there too)
+and run it.
+1. Plug in the board. The flasher picks the CYD's port (CH340) by itself; **Refresh** re-scans.
+2. Choose the version (it downloads it from GitHub), the panel type, and **update** (keeps settings) or
+   **factory** (first install). **Local file** flashes a `.bin` you already have.
+3. Click **Flash**. The board restarts by itself.
+
+ดาวน์โหลด `REDLINE-Flasher-windows.exe` จากหน้า release ล่าสุดแล้วเปิดได้เลย
+- โปรแกรมเลือกพอร์ตของบอร์ด CYD ให้เอง และเปลี่ยนเองได้
+- เลือกเวอร์ชัน (โปรแกรมโหลดไฟล์ให้), แบบจอ และ update (เก็บค่าที่ตั้งไว้) หรือ factory (ลงใหม่)
+- กด **Flash** ก็เสร็จ
+
+Windows may show "Windows protected your PC" because the app isn't code-signed: click **More info → Run anyway**.
+No COM port? Install the **CH340 driver** (WCH "CH341SER").
+Windows อาจขึ้นเตือนเพราะโปรแกรมไม่มีลายเซ็น ให้กด More info → Run anyway · ไม่เห็นพอร์ต: ลงไดรเวอร์ CH340
+macOS: `chmod +x REDLINE-Flasher-macos` then right-click → Open the first time (unsigned app).
+
+The flasher also works in a terminal:
+`REDLINE-Flasher --cli` (prompts), or `--port COM5 --variant invert --mode update --version latest -y`.
+
+**Without installing anything, in the browser (Chrome / Edge):**
 1. Open <https://espressif.github.io/esptool-js/> and plug in the board.
 2. Click **Connect** and pick the board's port (CH340 / USB serial).
 3. Add the file:

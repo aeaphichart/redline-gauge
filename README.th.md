@@ -27,7 +27,8 @@
 
 ไฟล์ `.bin` ของทุกเวอร์ชันอยู่ที่ **[หน้า Releases](https://github.com/moomdate/redline-gauge/releases)** มีให้ครบทุกแบบจอ
 (`invert` = ส่วนใหญ่, `noinvert` = จอสีกลับด้าน, `invert-dim` = บอร์ดที่หรี่ไฟจอได้)
-แฟลชผ่านเบราว์เซอร์ได้ที่ [esptool-js](https://espressif.github.io/esptool-js/) — ดู[วิธีเลือกไฟล์และแฟลช](docs/release-flashing.md)
+ง่ายสุดใช้ **REDLINE Flasher** (`REDLINE-Flasher-windows.exe`, มีของ macOS/Linux ด้วย) ในหน้าเดียวกัน — เปิดแล้วมันหาบอร์ด โหลดเวอร์ชันที่เลือก และแฟลชให้เอง
+หรือแฟลชผ่านเบราว์เซอร์ที่ [esptool-js](https://espressif.github.io/esptool-js/) — ดู[วิธีเลือกไฟล์และแฟลช](docs/release-flashing.md)
 · อะไรเปลี่ยนในแต่ละเวอร์ชัน: [CHANGELOG.md](CHANGELOG.md)
 
 ## 1. แฟลชลงบอร์ด

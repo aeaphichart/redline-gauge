@@ -18,6 +18,11 @@ new features bump the middle number, fixes the last one.
   - Works with any source that has speed (OBD, SERIAL/GPS, CUSTOM, SIM). On OBD the timer screen polls speed
     every other request.
 - Release images: factory and update `.bin` for each panel type, built by CI for every tag.
+- **REDLINE Flasher** (`tools/flasher`): an app for Windows, macOS and Linux.
+  - Picks the CYD's port automatically (you can choose another).
+  - Downloads the chosen version from GitHub Releases, or flashes a local `.bin`.
+  - Flashes as a factory install or as an update that keeps settings.
+  - Also has a terminal mode (`--cli`).
 
 ### Changed
 - The settings header shows the version and a TIMER button.

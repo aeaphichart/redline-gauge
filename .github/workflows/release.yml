@@ -4,15 +4,23 @@ name: release
 #   redline-vX.Y.Z-<invert|noinvert|invert-dim>-factory.bin  (flash at 0x0)
 #   redline-vX.Y.Z-<...>-update.bin                         (flash at 0x10000, keeps settings)
 # The release notes are that version's section of CHANGELOG.md.
+# Also: REDLINE Flasher (a click-to-flash app for Windows / macOS / Linux) is attached to the release.
+# Actions -> release -> "Run workflow" with a tag rebuilds just the flasher for an existing release.
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "existing release tag to attach the flasher to, e.g. v1.4.0"
+        required: true
 
 permissions:
   contents: write
 
 jobs:
   firmware:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +48,51 @@ jobs:
           cat docs/release-flashing.md >> notes.md
       - uses: softprops/action-gh-release@v2
         with:
+          name: REDLINE ${{ github.ref_name }}
           body_path: notes.md
           files: |
             release/redline-*.bin
             release/SHA256SUMS-*.txt
+
+  flasher:
+    needs: firmware                 # the firmware job creates the release; avoid parallel creates
+    if: always() && (needs.firmware.result == 'success' || needs.firmware.result == 'skipped')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            out: REDLINE-Flasher-windows.exe
+            built: dist/REDLINE-Flasher.exe
+            windowed: "--windowed"
+          - os: macos-latest
+            out: REDLINE-Flasher-macos
+            built: dist/REDLINE-Flasher
+            windowed: ""
+          - os: ubuntu-latest
+            out: REDLINE-Flasher-linux
+            built: dist/REDLINE-Flasher
+            windowed: ""
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build single-file app
+        shell: bash
+        working-directory: tools/flasher
+        run: |
+          pip install pyinstaller "esptool<5" pyserial
+          python redline_flasher.py --list-ports
+          pyinstaller --onefile ${{ matrix.windowed }} --name REDLINE-Flasher \
+                      --collect-all esptool --hidden-import serial.tools.list_ports redline_flasher.py
+          mv "${{ matrix.built }}" "../../${{ matrix.out }}"
+      - name: Check the bundle runs (no window)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: ./${{ matrix.out }} --list-ports
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: ${{ matrix.out }}

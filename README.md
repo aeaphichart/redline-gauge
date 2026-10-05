@@ -36,8 +36,10 @@ OBD-II Bluetooth, USB serial, or your own sensors.
 ## Download (no compiling)
 
 Ready-to-flash `.bin` files for every version are on the **[Releases page](https://github.com/moomdate/redline-gauge/releases)**,
-one per panel type (`invert` / `noinvert` / `invert-dim`). Flash them from the browser with
-[esptool-js](https://espressif.github.io/esptool-js/); see [which file and how](docs/release-flashing.md).
+one per panel type (`invert` / `noinvert` / `invert-dim`). Easiest: **REDLINE Flasher**
+(`REDLINE-Flasher-windows.exe`, also macOS / Linux) on the same page: it finds the board, downloads the
+version you pick and flashes it. Or flash from the browser with [esptool-js](https://espressif.github.io/esptool-js/).
+See [which file and how](docs/release-flashing.md).
 What changed in each version: [CHANGELOG.md](CHANGELOG.md).
 
 ## Build & flash
