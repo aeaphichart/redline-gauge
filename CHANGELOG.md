@@ -4,6 +4,12 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.6.4] - 2026-10-05
+
+### Changed
+- REDLINE Flasher marks the newest release "(latest)" in the Version list. The list is read from GitHub
+  Releases each time the app opens, so new firmware appears there without updating the flasher.
+
 ## [1.6.3] - 2026-10-05
 
 ### Changed

@@ -234,7 +234,9 @@ def gui(a):
         except Exception as e:                     # offline: local file still works
             log(f"Could not reach GitHub ({e}). Use 'Local file'.")
             return
-        tags = [r["tag_name"] for r in releases]
+        # The list is read from GitHub Releases every time the app starts, so a new
+        # firmware shows up here without updating the flasher.
+        tags = [r["tag_name"] + ("  (latest)" if i == 0 else "") for i, r in enumerate(releases)]
         root.after(0, lambda: (ver_box.configure(values=tags), ver_var.set(tags[0] if tags else "")))
         log(f"Releases: {', '.join(tags)}  (latest: {tags[0] if tags else '-'})")
 
@@ -259,7 +261,8 @@ def gui(a):
             try:
                 path = file_var.get()
                 if not path:
-                    rel = next((r for r in releases if r["tag_name"] == ver_var.get()), None)
+                    tag = ver_var.get().split()[0] if ver_var.get() else ""
+                    rel = next((r for r in releases if r["tag_name"] == tag), None)
                     if not rel:
                         raise RuntimeError("Pick a version (or a local .bin).")
                     asset = asset_for(rel, var_var.get(), mode_var.get())
