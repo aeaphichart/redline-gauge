@@ -87,6 +87,8 @@ static void themeThumb(Canvas &cv, const Theme &cur, int i, bool selected) {
     cv.text(font_ui, nx, 134, kThemes[i].name, C(selected ? kThemes[i].accentBright : C_MUTED), ALIGN_LEFT, 1);
 }
 
+static bool s_peakCleared = false;     // RESET PEAK feedback, until the next tap / redraw
+
 static void compose(Canvas &cv, const Settings &s) {
     const Theme &t = kThemes[s.theme];
     // backdrop: the theme's own art, darkened, so the page feels part of the gauge
@@ -121,7 +123,7 @@ static void compose(Canvas &cv, const Settings &s) {
 #endif
 
     button(cv, t, R_BEEP, s.beep ? "BEEP ON" : "BEEP OFF", s.beep, font_small);
-    button(cv, t, R_PEAK, "RESET PEAK", false, font_small);
+    button(cv, t, R_PEAK, s_peakCleared ? "CLEARED" : "RESET PEAK", s_peakCleared, font_small);
     button(cv, t, R_PANELS, kPanelLabels[s.panels < PANELS_COUNT ? s.panels : 0], s.panels != PANELS_AUTO, font_small);
     button(cv, t, R_GEAR, s.gearMode == GEARMODE_OFF ? "GEAR OFF" : "GEAR AUTO", s.gearMode == GEARMODE_OFF, font_small);
 }
@@ -140,7 +142,15 @@ void draw(const Settings &s) {
 
 Action tap(int x, int y, Settings &s) {
     Action a = ACT_NONE;
+    bool wasCleared = s_peakCleared;
+    s_peakCleared = false;
     if (inside(R_DONE, x, y)) return ACT_CLOSE;
+    // checked before the neighbouring buttons, so a tap on an edge can't change both
+    if (inside(R_PEAK, x, y)) {
+        s_peakCleared = true;
+        draw(s);                               // "CLEARED" lit, so the tap visibly worked
+        return ACT_RESET_PEAK;
+    }
     if (inside(R_TIMER, x, y)) return ACT_TIMER;
     for (int i = 0; i < THEME_COUNT; i++) {
         Rect r = themeCard(i);
@@ -159,9 +169,7 @@ Action tap(int x, int y, Settings &s) {
     if (inside(R_BEEP, x, y)) { s.beep = !s.beep; a = ACT_CHANGED; }
     if (inside(R_PANELS, x, y)) { s.panels = (s.panels + 1) % PANELS_COUNT; a = ACT_CHANGED; }
     if (inside(R_GEAR, x, y)) { s.gearMode = (s.gearMode + 1) % GEARMODE_COUNT; a = ACT_CHANGED; }
-    if (inside(R_PEAK, x, y)) return ACT_RESET_PEAK;
-
-    if (a == ACT_CHANGED) draw(s);
+    if (a == ACT_CHANGED || wasCleared) draw(s);
     return a;
 }
 

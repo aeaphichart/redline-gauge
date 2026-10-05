@@ -4,6 +4,19 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.5.1] - 2026-10-05
+
+### Fixed
+- **Garbled screen** (shifted or torn text and images), seen now and then while switching the data source.
+  The display link is back to 40 MHz SPI; 80 MHz was too close to the edge while Bluetooth started and stopped.
+  Still 60 fps.
+- **RESET PEAK**:
+  - The button now lights up "CLEARED" when tapped, so the tap is visible.
+  - A tap on its edge can no longer also change the PANEL button next to it.
+  - The gauge's PEAK label stays empty after a reset (and while you sit at the peak), and appears once the
+    engine has been higher than it is now. Before, it refilled with the current rpm at once and looked like
+    the reset had done nothing.
+
 ## [1.5.0] - 2026-10-05
 
 ### Changed

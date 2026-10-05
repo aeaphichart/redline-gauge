@@ -204,7 +204,9 @@ static void drawRpm(const GaugeView &v) {
     char num[12], peak[20] = "";
     if (v.rpmValid) fmtThousands(num, sizeof num, v.rpmText);
     else strcpy(num, "--");
-    if (v.sessionPeak > 0) {
+    // shown only once there is a peak above where the engine is now - right after a reset
+    // (or while sitting at the peak) the label stays empty
+    if (v.sessionPeak > 0 && v.sessionPeak >= v.rpmText + 200) {
         char p[12];
         fmtThousands(p, sizeof p, v.sessionPeak);
         snprintf(peak, sizeof peak, "PEAK %s", p);
