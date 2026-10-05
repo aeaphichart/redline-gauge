@@ -190,8 +190,21 @@ def gui(a):
         except Exception:
             pass
     root = tk.Tk()
-    root.title("REDLINE Flasher")
-    root.minsize(560, 460)
+    root.title("REDLINE Flasher - birdlab.th")
+    root.minsize(560, 500)
+    try:                                           # birdlab.th logo: window icon + header
+        from assets import ICON_GIF, BANNER_GIF
+        icon = tk.PhotoImage(data=ICON_GIF)
+        root.iconphoto(True, icon)
+        head = tk.Frame(root, bg="#12161c")
+        head.pack(fill="x")
+        banner = tk.PhotoImage(data=BANNER_GIF)
+        tk.Label(head, image=banner, bg="#12161c").pack(side="left", padx=4, pady=2)
+        tk.Label(head, text="REDLINE Flasher", fg="#ffffff", bg="#12161c",
+                 font=("Segoe UI", 13, "bold")).pack(side="right", padx=12)
+        root._logo_refs = (icon, banner)           # keep the images alive
+    except Exception:
+        pass
     frm = ttk.Frame(root, padding=12)
     frm.pack(fill="both", expand=True)
     frm.columnconfigure(1, weight=1)

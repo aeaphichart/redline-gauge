@@ -85,7 +85,7 @@ jobs:
         run: |
           pip install pyinstaller "esptool<5" pyserial
           python redline_flasher.py --list-ports
-          pyinstaller --onefile ${{ matrix.windowed }} --name REDLINE-Flasher \
+          pyinstaller --onefile ${{ matrix.windowed }} --name REDLINE-Flasher --icon birdlab.ico \
                       --collect-all esptool --hidden-import serial.tools.list_ports redline_flasher.py
           mv "${{ matrix.built }}" "../../${{ matrix.out }}"
       - name: Check the bundle runs (no window)
