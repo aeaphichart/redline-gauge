@@ -32,6 +32,8 @@ REDLINE ไม่ได้อ่านคำสั่งเฉพาะยี่
 
 ---
 
+**ยืนยันแล้ว:** Honda Civic e:HEV (2022+) · Toyota Hilux Revo (2019)
+
 ## กระบะ / PPV
 
 | รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
@@ -40,7 +42,9 @@ REDLINE ไม่ได้อ่านคำสั่งเฉพาะยี่
 | Isuzu D-Max 2.5/3.0 (2012–2019), MU-X (2013+) | 🟡 | CAN 500k | เหมือนข้างบน ค่าไอดีของดีเซล Isuzu ยังไม่ยืนยัน | กลาง |
 | Isuzu D-Max รุ่นแรก (2003–2011) | 🟡 / ❌ | 2007+ CAN, ก่อนนั้นไม่แน่นอน | คอมมอนเรล 2007+ ร้านในไทยบอกว่า ELM327 ใช้ได้ ส่วนก่อน 2007 น่าจะไม่ได้ ใช้โปรโตคอลเฉพาะยี่ห้อ | ต่ำ |
 | Toyota Hilux **Vigo** / Fortuner (2004–2015, 1KD/2KD) | 🟡 | K-Line (ISO 14230) รุ่นแรก, รุ่นหลังอาจเป็น CAN | ค่าครบ แต่ K-Line ช้ากว่า (ค่าอัปเดตไม่กี่ครั้งต่อวินาที) และหาเครื่องนานหลายวินาที ([OBD Planet](https://obdplanet.com/obd2-protocol/)) | กลาง |
-| Toyota Hilux **Revo** / Fortuner (2015+, 1GD/2GD) | 🟢 | CAN 500k | ค่ามาตรฐานครบรวมไอดี ([OBDb Hilux](https://github.com/OBDb/Toyota-Hilux)) ELM327 ก๊อปเกรดต่ำบางตัวต่อไม่ติด | สูง |
+| **Toyota Hilux Revo (2019, 2.4/2.8 GD)** | ✅ | CAN 500k | **ยืนยันแล้ว** (ต.ค. 2026) เสียบ ELM327 ค่าขึ้นจอเลย | ยืนยัน |
+| Toyota Hilux Revo ปีอื่น (2015–2024 รวม Rocco / Z Edition), Fortuner (2015+) | 🟢 | CAN 500k | แพลตฟอร์มและเครื่อง GD ตระกูลเดียวกับ Revo 2019 ที่ยืนยันแล้ว ควรได้เหมือนกัน ([OBDb Hilux](https://github.com/OBDb/Toyota-Hilux)) · ELM327 ก๊อปเกรดต่ำบางตัวต่อไม่ติด | สูง |
+| Toyota Innova Crysta, Hiace / Commuter (2019+), Hilux Champ ดีเซล (2023+) | 🟢 | CAN 500k | ใช้เครื่องดีเซล GD และระบบไฟยุคเดียวกับ Revo น่าจะได้ค่าเหมือนกัน ยังไม่มีคนลอง | กลาง |
 | Ford Ranger T6 (2012+, รวม 2.0 Bi-Turbo), Everest | 🟢 | CAN 500k | ([Pelican](https://pelican.clutch.engineering/cars/ford/ranger/)) | สูง |
 | Mazda BT-50 Pro (2012+) | 🟢 | CAN 500k | ระบบไฟฟ้าเดียวกับ Ranger | กลาง |
 | Mitsubishi Triton (2005–2014, 4D56) | 🟢 | CAN 500k (2006+) | ([pinout](https://pinoutguide.com/CarElectronics/mitsubishi_obd2_daig_pinout.shtml)) | กลาง–สูง |
@@ -105,3 +109,7 @@ REDLINE ไม่ได้อ่านคำสั่งเฉพาะยี่
 4. **ดีเซล** บางรุ่นไม่มีค่าไอดี ช่อง INTAKE จะขึ้น `--`
 5. **ต้องบิดกุญแจ ON หรือสตาร์ทเครื่อง** ACC อย่างเดียวไม่พอ
 6. **ตัว ELM327** ต้องเป็น **Bluetooth Classic** รุ่นที่เป็น BLE อย่างเดียว (เช่นรุ่นที่ใช้กับ iPhone ได้) ใช้ไม่ได้ และตัดมือถือออกจาก ELM327 ก่อนต่อ ดู [README หัวข้อ OBD BT](../README.th.md)
+
+---
+
+รถ K-Line รุ่นเก่า (Vigo ช่วงแรก, Vios/City รุ่นเก่า) ต่อผ่าน ELM327 ได้อยู่แล้ว (ช้ากว่า CAN) · แผนอ่านตรงผ่านบอร์ด K-Line โดยไม่ใช้ ELM327: [kline-car-notes.md](kline-car-notes.md)
