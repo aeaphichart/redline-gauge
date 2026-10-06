@@ -32,21 +32,24 @@ REDLINE ไม่ได้อ่านคำสั่งเฉพาะยี่
 
 ---
 
-**ยืนยันแล้ว:** Honda Civic e:HEV (2022+) · Toyota Hilux Revo (2019)
+**ยืนยันแล้ว:** Honda Civic e:HEV (2022+) · Toyota Hilux Revo (2019) · Mazda BT-50 (2021, 1.9 RZ4E)
 
 ## กระบะ / PPV
 
 | รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
 |---|---|---|---|---|
-| **Isuzu D-Max 1.9 Ddi Blue Power** (2016+, RZ4E) | 🟡 | CAN 500k | ตามข้อมูลน่าจะใช้ได้ (Isuzu ใช้ CAN ตั้งแต่ ~2007) แต่ยังไม่เจอรายงานจากคนใช้จริง ค่าไอดีอาจไม่มี ([pinout](https://pinoutguide.com/CarElectronics/isuzu_car_obd_ii_pinout.shtml)) | กลาง |
-| Isuzu D-Max 2.5/3.0 (2012–2019), MU-X (2013+) | 🟡 | CAN 500k | เหมือนข้างบน ค่าไอดีของดีเซล Isuzu ยังไม่ยืนยัน | กลาง |
+| **Mazda BT-50 (2021+, 1.9 RZ4E)** | ✅ | CAN 500k | **ยืนยันแล้ว** (ต.ค. 2026) เกจขึ้นครบทุกค่า อัปเดตไว · ตัวรถและเครื่องเดียวกับ Isuzu D-Max รุ่นที่ 3 | ยืนยัน |
+| Isuzu D-Max 1.9 Blue Power (2020+, RZ4E) · MU-X 1.9 (2021+) | 🟢 | CAN 500k | แพลตฟอร์ม เครื่อง และระบบไฟเดียวกับ BT-50 2021 ที่ยืนยันแล้ว ควรได้เหมือนกัน | สูง |
+| Isuzu D-Max 3.0 (2020+, 4JJ3) · MU-X 3.0 (2021+) · BT-50 3.0 (2021+) | 🟢 | CAN 500k | แพลตฟอร์มเดียวกัน ต่างแค่เครื่อง ECU ตระกูล Isuzu เดียวกัน | สูง |
+| Isuzu D-Max 1.9 Blue Power (2016–2019, RZ4E) · MU-X 1.9 (2016–2020) | 🟢 | CAN 500k | เครื่อง RZ4E ตัวเดียวกับ BT-50 2021 ที่ยืนยันแล้ว แต่ตัวรถรุ่นก่อน (ECU รุ่นเก่ากว่า) | กลาง–สูง |
+| Isuzu D-Max 2.5/3.0 (2012–2019) · MU-X (2013–2020) | 🟡 | CAN 500k | ยุค CAN เดียวกัน น่าจะได้ ค่าไอดีของดีเซล Isuzu รุ่นนี้ยังไม่ยืนยัน | กลาง |
 | Isuzu D-Max รุ่นแรก (2003–2011) | 🟡 / ❌ | 2007+ CAN, ก่อนนั้นไม่แน่นอน | คอมมอนเรล 2007+ ร้านในไทยบอกว่า ELM327 ใช้ได้ ส่วนก่อน 2007 น่าจะไม่ได้ ใช้โปรโตคอลเฉพาะยี่ห้อ | ต่ำ |
 | Toyota Hilux **Vigo** / Fortuner (2004–2015, 1KD/2KD) | 🟡 | K-Line (ISO 14230) รุ่นแรก, รุ่นหลังอาจเป็น CAN | ค่าครบ แต่ K-Line ช้ากว่า (ค่าอัปเดตไม่กี่ครั้งต่อวินาที) และหาเครื่องนานหลายวินาที ([OBD Planet](https://obdplanet.com/obd2-protocol/)) | กลาง |
 | **Toyota Hilux Revo (2019, 2.4/2.8 GD)** | ✅ | CAN 500k | **ยืนยันแล้ว** (ต.ค. 2026) เสียบ ELM327 ค่าขึ้นจอเลย | ยืนยัน |
 | Toyota Hilux Revo ปีอื่น (2015–2024 รวม Rocco / Z Edition), Fortuner (2015+) | 🟢 | CAN 500k | แพลตฟอร์มและเครื่อง GD ตระกูลเดียวกับ Revo 2019 ที่ยืนยันแล้ว ควรได้เหมือนกัน ([OBDb Hilux](https://github.com/OBDb/Toyota-Hilux)) · ELM327 ก๊อปเกรดต่ำบางตัวต่อไม่ติด | สูง |
 | Toyota Innova Crysta, Hiace / Commuter (2019+), Hilux Champ ดีเซล (2023+) | 🟢 | CAN 500k | ใช้เครื่องดีเซล GD และระบบไฟยุคเดียวกับ Revo น่าจะได้ค่าเหมือนกัน ยังไม่มีคนลอง | กลาง |
 | Ford Ranger T6 (2012+, รวม 2.0 Bi-Turbo), Everest | 🟢 | CAN 500k | ([Pelican](https://pelican.clutch.engineering/cars/ford/ranger/)) | สูง |
-| Mazda BT-50 Pro (2012+) | 🟢 | CAN 500k | ระบบไฟฟ้าเดียวกับ Ranger | กลาง |
+| Mazda BT-50 Pro (2012–2020) | 🟢 | CAN 500k | รุ่นนี้ใช้พื้นฐาน Ford Ranger (ไม่ใช่ Isuzu) ระบบไฟเดียวกับ Ranger | กลาง |
 | Mitsubishi Triton (2005–2014, 4D56) | 🟢 | CAN 500k (2006+) | ([pinout](https://pinoutguide.com/CarElectronics/mitsubishi_obd2_daig_pinout.shtml)) | กลาง–สูง |
 | Mitsubishi Triton (2015+), Pajero Sport | 🟢 | CAN 500k | ([Pelican](https://pelican.clutch.engineering/cars/mitsubishi/l200/)) | กลาง–สูง |
 | Nissan Navara D40 (2007–2014) | 🟡 | CAN 500k | รายงานไม่ตรงกัน บางคันใช้ได้ บางคันขึ้นว่าต่อ ECU ไม่ได้ ([navaraforum](https://www.navaraforum.com/threads/obd-torque-app.14050/)) · D22 รุ่นเก่า ❌ | กลาง |
