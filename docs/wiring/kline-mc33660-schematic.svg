@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="880" viewBox="0 0 1400 880"><defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#16202a"/></pattern><style>text{font-family:Arial,sans-serif}.t{font-family:'Arial Narrow',Arial,sans-serif;font-weight:700}.m{font-family:Menlo,Consolas,monospace}.w{fill:none;stroke:#c9d3da;stroke-width:3;stroke-linejoin:round}.k{fill:none;stroke:#ff8a00;stroke-width:3.5;stroke-linejoin:round}.v{fill:none;stroke:#ff4747;stroke-width:3.5;stroke-linejoin:round}.g{fill:none;stroke:#9aa5ae;stroke-width:3.5;stroke-linejoin:round}.rx{fill:none;stroke:#b6ff00;stroke-width:3.5;stroke-linejoin:round}.tx{fill:none;stroke:#4fd2ff;stroke-width:3.5;stroke-linejoin:round}.p5{fill:none;stroke:#ff5ad2;stroke-width:3.5;stroke-linejoin:round}.p3{fill:none;stroke:#ffc400;stroke-width:3.5;stroke-linejoin:round}.r{fill:#182028;stroke:#e6edf2;stroke-width:2}.muted{fill:#8796a0}.lbl{fill:white}</style></defs>
+<rect width="1400" height="880" fill="#0b0f13"/><rect x="24" y="24" width="1352" height="832" rx="16" fill="url(#g)" stroke="#27333c" stroke-width="2"/>
+<path d="M24 100V40q0-16 16-16h250" fill="none" stroke="#2eff6e" stroke-width="5"/>
+<text x="56" y="74" fill="white" font-size="32" class="t">K-LINE WITH MC33660 (ISO 9141 TRANSCEIVER) → CYD</text>
+<text x="56" y="100" class="muted" font-size="17">MC33660 logic runs on 5 V only (VDD 4.75-5.25 V): RX/TX are 5 V → level-shift both to the ESP32's 3.3 V · not isolated: one common GND</text>
+
+<!-- vehicle connector -->
+<rect x="56" y="170" width="170" height="300" rx="12" fill="#3a0f12" stroke="#ff3b3b" stroke-width="2.5"/>
+<text class="m" x="70" y="196" fill="#ff8080" font-size="14">VEHICLE</text>
+<text class="m" x="70" y="214" fill="#c98080" font-size="11">OBD pin / Honda DLC</text>
+<text class="m" x="70" y="256" fill="#ff6b6b" font-size="13">+12V  (16 / wht-blk)</text>
+<text class="m" x="70" y="356" fill="#ff8a00" font-size="13">K-LINE (7 / orange)</text>
+<text class="m" x="70" y="446" fill="#c9d3da" font-size="13">GND   (4,5 / green)</text>
+
+<!-- +12V -> D1 -> VBAT_P -->
+<path class="v" d="M226 250H290"/>
+<path d="M290 236l24 14l-24 14z" fill="#ff4747"/><path d="M314 236v28" stroke="#ff4747" stroke-width="3"/>
+<text class="m lbl" x="270" y="208" font-size="12">D1 1N4007</text><text class="m muted" x="270" y="224" font-size="11">reverse battery</text>
+<path class="v" d="M314 250H480"/><circle cx="400" cy="250" r="5" fill="#ff4747"/><circle cx="480" cy="250" r="5" fill="#ff4747"/>
+<text class="m" x="430" y="240" fill="#ff9a9a" font-size="12">VBAT</text>
+
+<!-- R2 510 pull-up to ISO -->
+<path class="v" d="M400 250V270"/><rect class="r" x="384" y="270" width="32" height="48" rx="4"/><path class="k" d="M400 318V350"/>
+<text class="m lbl" x="290" y="300" font-size="12">R2 510 Ω</text><text class="m muted" x="262" y="316" font-size="11">½ W K pull-up</text>
+<!-- R1 500 to VBB -->
+<path class="v" d="M480 250V270"/><rect class="r" x="464" y="270" width="32" height="48" rx="4"/><path class="v" d="M480 318V330H600"/>
+<text class="m lbl" x="500" y="290" font-size="12">R1 500 Ω</text>
+
+<!-- K line -->
+<path class="k" d="M226 350H600"/><circle cx="400" cy="350" r="5" fill="#ff8a00"/>
+<!-- GND rail -->
+<path class="g" d="M226 440H600"/>
+
+<!-- protection to GND -->
+<path class="w" d="M540 330V372"/><rect class="r" x="528" y="372" width="24" height="16" rx="2"/><path class="g" d="M540 388V440"/>
+<text class="m muted" x="476" y="384" font-size="11">C1 10 nF</text>
+<path class="w" d="M330 350V392"/><rect class="r" x="318" y="392" width="24" height="16" rx="2"/><path class="g" d="M330 408V440"/>
+<text class="m muted" x="240" y="466" font-size="11">ZD 27 V + 470 pF to GND (ESD, optional)</text>
+
+<!-- MC33660 -->
+<rect x="600" y="200" width="230" height="290" rx="10" fill="#123018" stroke="#2eff6e" stroke-width="3"/>
+<text class="m" x="715" y="232" text-anchor="middle" fill="#2eff6e" font-size="16">MC33660</text>
+<text class="m" x="715" y="250" text-anchor="middle" fill="#9fdcb0" font-size="11">SO-8</text>
+<text class="m lbl" x="612" y="335" font-size="13">1 VBB</text>
+<text class="m lbl" x="612" y="355" font-size="13">4 ISO</text>
+<text class="m lbl" x="612" y="445" font-size="13">3 GND</text>
+<text class="m muted" x="612" y="475" font-size="12">2 NC</text>
+<text class="m lbl" x="818" y="275" text-anchor="end" font-size="13">7 VDD</text>
+<text class="m lbl" x="818" y="305" text-anchor="end" font-size="13">8 CEN</text>
+<text class="m lbl" x="818" y="365" text-anchor="end" font-size="13">6 RX</text>
+<text class="m lbl" x="818" y="425" text-anchor="end" font-size="13">5 TX</text>
+
+<!-- +5V rail -->
+<path class="p5" d="M830 270H880V300H830"/><path class="p5" d="M880 270V180H1160V340H1180"/><path class="p5" d="M1025 180V320"/><circle cx="1025" cy="180" r="5" fill="#ff5ad2"/>
+<text class="m" x="890" y="170" fill="#ff8be3" font-size="13">+5V (CYD P1 VIN / USB 5 V)</text>
+
+
+<!-- level shifter -->
+<rect x="940" y="320" width="170" height="150" rx="10" fill="#1b1430" stroke="#b07cff" stroke-width="2.5"/>
+<text class="m" x="1025" y="342" text-anchor="middle" fill="#cfa8ff" font-size="13">LEVEL SHIFTER</text>
+<text class="m" x="1025" y="358" text-anchor="middle" fill="#a993d6" font-size="11">BSS138 module 5V↔3.3V</text>
+<text class="m lbl" x="950" y="380" font-size="12">HV1</text><text class="m lbl" x="1100" y="380" text-anchor="end" font-size="12">LV1</text>
+<text class="m lbl" x="950" y="430" font-size="12">HV2</text><text class="m lbl" x="1100" y="430" text-anchor="end" font-size="12">LV2</text>
+<text class="m muted" x="950" y="458" font-size="11">HV=5V LV=3.3V GND</text>
+<path class="rx" d="M830 360H900V376H940"/><path class="rx" d="M1110 376H1180"/>
+<path class="tx" d="M830 420H900V426H940"/><path class="tx" d="M1110 426H1180"/>
+
+
+<!-- CYD -->
+<rect x="1180" y="250" width="170" height="330" rx="16" fill="#5d5200" stroke="#ffc400" stroke-width="3"/>
+<text class="m" x="1196" y="280" fill="white" font-size="14">CYD</text>
+<text class="m" x="1196" y="300" fill="#e8dc8a" font-size="11">P1 / CN1</text>
+<text class="m" x="1196" y="345" fill="#ff8be3" font-size="13">VIN 5V (P1)</text>
+<text class="m" x="1196" y="380" fill="#b6ff00" font-size="13">GPIO 27 RX</text>
+<text class="m" x="1196" y="430" fill="#4fd2ff" font-size="13">GPIO 22 TX</text>
+<text class="m" x="1196" y="490" fill="#ffc400" font-size="13">3.3 V</text>
+<text class="m" x="1196" y="560" fill="white" font-size="13">GND</text>
+<path class="p3" d="M1180 486H1080V470"/><text class="m" x="1086" y="502" fill="#ffc400" font-size="11">LV 3.3V</text>
+<!-- common ground -->
+<path class="g" d="M600 440H580V620H1240V580"/><path class="g" d="M1025 470V620"/>
+<text class="m" x="700" y="640" fill="#9aa5ae" font-size="13">ONE COMMON GND: vehicle · MC33660 · level shifter · CYD</text>
+
+<!-- notes -->
+<rect x="56" y="680" width="640" height="160" rx="10" fill="#11181e" stroke="#53616b" stroke-width="2"/>
+<text class="m" x="72" y="706" fill="#2eff6e" font-size="14">WHY NOT STRAIGHT TO THE ESP32?</text>
+<text class="m lbl" x="72" y="732" font-size="13">• VDD must be 5 V (4.75-5.25 V), 3.3 V is out of spec</text>
+<text class="m lbl" x="72" y="754" font-size="13">• TX needs ≥ 0.7×VDD = 3.5 V high → ESP32's 3.3 V may fail</text>
+<text class="m lbl" x="72" y="776" font-size="13">• RX drives up to 5 V → would overdrive GPIO 27 (3.3 V max)</text>
+<text class="m lbl" x="72" y="798" font-size="13">• CEN tied to 5 V (chip on) · 100 nF VDD→GND at the chip</text>
+<text class="m muted" x="72" y="822" font-size="12">5 V Arduino: RX/TX may connect directly (no shifter).</text>
+<rect x="720" y="680" width="636" height="160" rx="10" fill="#11181e" stroke="#53616b" stroke-width="2"/>
+<text class="m" x="736" y="706" fill="#ffc400" font-size="14">FIRMWARE</text>
+<text class="m lbl" x="736" y="732" font-size="13">• Not inverted → klineinvert=off (the default)</text>
+<text class="m lbl" x="736" y="754" font-size="13">• Honda bikes: SETUP → DATA SOURCE → HONDA</text>
+<text class="m lbl" x="736" y="776" font-size="13">• 10400 baud; the MC33660 echoes TX on RX (handled)</text>
+<text class="m muted" x="736" y="800" font-size="12">Values from the NXP MC33660 datasheet typical application</text>
+<text class="m muted" x="736" y="818" font-size="12">(510 Ω ISO pull-up, 500 Ω + diode on VBB, 10 nF VBB cap)</text>
+</svg>
