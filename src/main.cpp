@@ -113,7 +113,7 @@ static void printHelp() {
         "  mode=sim|touch|serial|obd|custom|honda   theme=ice|lime|amber   shift=7000\n"
         "  bright=20..100   beep=on|off   peak=reset   help\n"
         "  panels=auto|standard|hybrid   gearmode=auto|off   invert=on|off (panel colours)\n"
-        "  timer   timerlog   timerlog=clear   kdump (HONDA K raw tables)\n"
+        "  timer   timerlog   timerlog=clear   kdump (HONDA K raw tables)   klineinvert=on|off\n"
         "  obd=scan | obd=AA:BB:CC:DD:EE:FF   obdpin=1234|0000 (empty = auto)\n"
         "data (SERIAL mode):  rpm=3200 spd=86 clt=87 volt=13.9 iat=42 gear=3\n"
         "           or JSON:  {\"rpm\":3200,\"speed\":86,\"coolant\":87,\"voltage\":13.9}\n"));
@@ -195,6 +195,11 @@ static void handleLine(char *line) {
         return;
     } else if (!strncasecmp(p, "timer", 5)) {
         openTimer();
+        return;
+    } else if (keyIs(p, "klineinvert", &v)) {
+        HondaKSource::setInvert(!strncasecmp(v, "on", 2) || *v == '1');
+        Serial.printf("[gauge] K-line polarity %s (saved; applies on the next connect)\n",
+                      HondaKSource::invert() ? "INVERTED (opto interface)" : "normal");
         return;
     } else if (!strncasecmp(p, "kdump", 5)) {
         HondaKSource::dumpOn = !HondaKSource::dumpOn;

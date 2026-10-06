@@ -4,9 +4,19 @@
 #include "config.h"
 #include <Arduino.h>
 #include <driver/gpio.h>
+#include <Preferences.h>
 
 volatile bool HondaKSource::ownsUart = false;
 volatile bool HondaKSource::dumpOn = false;
+static volatile bool s_invert = KLINE_INVERT;
+
+bool HondaKSource::invert() { return s_invert; }
+
+void HondaKSource::setInvert(bool on) {
+    s_invert = on;
+    Preferences p;
+    if (p.begin("kline", false)) { p.putBool("inv", on); p.end(); }
+}
 
 static HardwareSerial &K = Serial2;
 
@@ -19,6 +29,8 @@ void HondaKSource::retryIn(uint32_t ms, State then, const char *msg) {
 
 void HondaKSource::begin() {
     ownsUart = true;                   // main.cpp stops reading Serial2 as the text input
+    Preferences p;
+    if (p.begin("kline", false)) { s_invert = p.getBool("inv", KLINE_INVERT); p.end(); }
     delay(20);                         // let a poll in progress on the other core finish
     state_ = S_WAKE;
     errors_ = fails_ = cycle_ = 0;
@@ -40,12 +52,14 @@ void HondaKSource::end() {
 // Wake-up: K-line low 70 ms, high 120 ms (a long "break" the UART can't produce on its own)
 void HondaKSource::wake() {
     K.end();
+    // "K low" is TX low on a normal transceiver, TX high through an inverting opto stage
+    uint8_t kLow = s_invert ? HIGH : LOW, kHigh = s_invert ? LOW : HIGH;
     pinMode(KLINE_TX_PIN, OUTPUT);
-    digitalWrite(KLINE_TX_PIN, LOW);
+    digitalWrite(KLINE_TX_PIN, kLow);
     delay(70);
-    digitalWrite(KLINE_TX_PIN, HIGH);
+    digitalWrite(KLINE_TX_PIN, kHigh);
     delay(120);
-    K.begin(10400, SERIAL_8N1, KLINE_RX_PIN, KLINE_TX_PIN);
+    K.begin(10400, SERIAL_8N1, KLINE_RX_PIN, KLINE_TX_PIN, s_invert);
     while (K.available()) K.read();
 }
 

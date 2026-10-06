@@ -75,6 +75,7 @@
 // from 3.3 V): board RX-out -> KLINE_RX_PIN, KLINE_TX_PIN -> board TX-in. Both on CN1.
 #define KLINE_RX_PIN        27
 #define KLINE_TX_PIN        22
+#define KLINE_INVERT         0      // 1 = inverting opto interface (DIY 2-opto schematic); also `klineinvert=on`
 
 // ---- Hardware (CYD) -----------------------------------------------------------
 #define PIN_SPEAKER          26

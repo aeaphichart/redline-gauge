@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760"><defs><pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#16202a"/></pattern><style>text{font-family:Arial,sans-serif}.t{font-family:'Arial Narrow',Arial,sans-serif;font-weight:700}.m{font-family:Menlo,Consolas,monospace}.b{fill:#11181e;stroke:#53616b;stroke-width:2}.k{fill:none;stroke:#ff8a00;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}.v{fill:none;stroke:#ff4747;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}.rx{fill:none;stroke:#b6ff00;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}.tx{fill:none;stroke:#4fd2ff;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}.p3{fill:none;stroke:#ffc400;stroke-width:4;stroke-linejoin:round}.gr{fill:none;stroke:#9aa5ae;stroke-width:4;stroke-linejoin:round}.muted{fill:#8796a0}</style></defs>
+<rect width="1200" height="760" fill="#0b0f13"/><rect x="32" y="32" width="1136" height="696" rx="16" fill="url(#g)" stroke="#27333c" stroke-width="2"/>
+<path d="M32 108V48q0-16 16-16h250" fill="none" stroke="#ff8a00" stroke-width="5"/>
+<text x="64" y="82" fill="white" font-size="34" class="t">HONDA 4-PIN DIAG → K-LINE BOARD → CYD (HONDA K MODE)</text>
+<text x="64" y="110" class="muted" font-size="18">PGM-FI bikes ~2008-2018 (CB500X/F, CBR250/300/500, CRF250L, MSX, PCX, Click i, Wave i) · 2019+ CAN bikes: not supported</text>
+
+<!-- Honda connector -->
+<rect x="64" y="160" width="230" height="300" rx="16" fill="#3a0f12" stroke="#ff3b3b" stroke-width="3"/>
+<text class="m" x="84" y="194" fill="#ff8080" font-size="17">HONDA DLC (red, 4-pin)</text>
+<text class="m" x="84" y="240" fill="#ff8a00" font-size="16">2  ORANGE  K-LINE</text>
+<text class="m" x="84" y="300" fill="#ff6b6b" font-size="16">4  WHT/BLK +12V sw</text>
+<text class="m" x="84" y="360" fill="#c9d3da" font-size="16">1  GREEN   GND</text>
+<text class="m" x="84" y="420" fill="#a0785a" font-size="16">3  BROWN   SCS</text>
+<rect x="286" y="232" width="16" height="16" fill="#ff8a00"/><rect x="286" y="292" width="16" height="16" fill="#ff4747"/><rect x="286" y="352" width="16" height="16" fill="#9aa5ae"/>
+<path d="M300 412l16 16m0-16l-16 16" stroke="#ff4747" stroke-width="4"/><text class="m" x="326" y="425" fill="#ff8080" font-size="14">not connected</text>
+
+<!-- car side wires -->
+<path class="k" d="M302 240H470"/><path class="v" d="M302 300H470"/><path class="gr" d="M302 360H470"/>
+
+<!-- transceiver board -->
+<rect x="470" y="160" width="270" height="300" rx="16" fill="#123018" stroke="#2eff6e" stroke-width="3"/>
+<text class="m" x="490" y="194" fill="#2eff6e" font-size="17">K-LINE BOARD</text>
+<text class="m" x="490" y="216" fill="#9fdcb0" font-size="13">L9637D or opto-isolated</text>
+<text class="m" x="490" y="245" fill="white" font-size="15">K-LINE</text>
+<text class="m" x="490" y="305" fill="white" font-size="15">12V</text>
+<text class="m" x="490" y="365" fill="white" font-size="15">GND (bike)</text>
+<text class="m" x="720" y="245" text-anchor="end" fill="white" font-size="15">RX-out</text>
+<text class="m" x="720" y="305" text-anchor="end" fill="white" font-size="15">TX-in</text>
+<text class="m" x="720" y="365" text-anchor="end" fill="white" font-size="15">VCC</text>
+<text class="m" x="720" y="425" text-anchor="end" fill="white" font-size="15">GND</text>
+<rect x="732" y="232" width="16" height="16" fill="#b6ff00"/><rect x="732" y="292" width="16" height="16" fill="#4fd2ff"/><rect x="732" y="352" width="16" height="16" fill="#ffc400"/><rect x="732" y="412" width="16" height="16" fill="#9aa5ae"/>
+
+<!-- logic side wires -->
+<path class="rx" d="M748 240H880"/><path d="M820 240l-12-8v16z" fill="#b6ff00"/>
+<path class="tx" d="M748 300H880"/><path d="M792 300l12-8v16z" fill="#4fd2ff"/>
+<path class="p3" d="M748 360H880"/><path class="gr" d="M748 420H880"/>
+<text class="m" x="814" y="228" text-anchor="middle" fill="#b6ff00" font-size="12">data from bike</text>
+<text class="m" x="814" y="288" text-anchor="middle" fill="#4fd2ff" font-size="12">data to bike</text>
+
+<!-- CYD -->
+<rect x="880" y="160" width="250" height="300" rx="18" fill="#5d5200" stroke="#ffc400" stroke-width="3"/>
+<text class="m" x="904" y="194" fill="white" font-size="16">CYD  CN1</text>
+<text class="m" x="904" y="216" fill="#e8dc8a" font-size="13">ESP32-2432S028R</text>
+<text class="m" x="904" y="245" fill="#b6ff00" font-size="16">GPIO 27  (RX)</text>
+<text class="m" x="904" y="305" fill="#4fd2ff" font-size="16">GPIO 22  (TX)</text>
+<text class="m" x="904" y="365" fill="#ffc400" font-size="16">3.3 V</text>
+<text class="m" x="904" y="425" fill="white" font-size="16">GND</text>
+<rect x="872" y="232" width="16" height="16" fill="#b6ff00"/><rect x="872" y="292" width="16" height="16" fill="#4fd2ff"/><rect x="872" y="352" width="16" height="16" fill="#ffc400"/><rect x="872" y="412" width="16" height="16" fill="#9aa5ae"/>
+
+<!-- power -->
+<path class="v" d="M446 300V560H560"/><circle cx="446" cy="300" r="6" fill="#ff4747"/>
+<rect x="560" y="520" width="270" height="80" rx="12" fill="#182028" stroke="#ff4747" stroke-width="2"/>
+<text class="m" x="695" y="552" text-anchor="middle" fill="white" font-size="15">ISOLATED DC-DC</text>
+<text class="m" x="695" y="578" text-anchor="middle" fill="#ff9a9a" font-size="15">12 V → 5 V (≥ 1 A)</text>
+<path d="M830 560H1005V460" fill="none" stroke="#ff4747" stroke-width="4" stroke-dasharray="10 6"/>
+<text class="m" x="1015" y="520" fill="#ff9a9a" font-size="14">5 V → USB / VIN</text>
+<path class="gr" d="M458 360V610H560"/><circle cx="458" cy="360" r="6" fill="#9aa5ae"/>
+<text class="m" x="480" y="632" fill="#9aa5ae" font-size="13">bike GND stays on the bike side</text>
+
+<!-- notes -->
+<rect class="b" x="64" y="490" width="330" height="200" rx="12"/>
+<text class="m" x="84" y="518" fill="#ff8a00" font-size="15">CHECK BEFORE RIDING</text>
+<text class="m" x="84" y="546" fill="white" font-size="13">• VCC from 3.3 V only - never 5 V</text>
+<text class="m" x="84" y="570" fill="white" font-size="13">• No data / NO K-LINE? swap the two</text>
+<text class="m" x="100" y="588" fill="white" font-size="13">data wires (TX/RX names differ)</text>
+<text class="m" x="84" y="612" fill="white" font-size="13">• Verify wire colours with a meter</text>
+<text class="m" x="84" y="636" fill="white" font-size="13">• SETUP → DATA SOURCE → HONDA</text>
+<text class="m" x="84" y="660" fill="white" font-size="13">• Ignition ON · serial `kdump` = raw</text>
+<text class="m muted" x="84" y="680" font-size="12">Isolated board: keep bike GND and CYD GND apart</text>
+<rect class="b" x="860" y="600" width="270" height="90" rx="12"/>
+<text class="m" x="880" y="628" fill="#2eff6e" font-size="14">10400 baud · 1 wire</text>
+<text class="m" x="880" y="652" fill="white" font-size="13">wake 70 ms low / 120 ms high</text>
+<text class="m" x="880" y="674" fill="white" font-size="13">then table 0x11 ~15 Hz</text>
+</svg>

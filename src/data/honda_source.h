@@ -20,6 +20,10 @@ public:
 
     static volatile bool ownsUart;     // main.cpp leaves Serial2 alone while true
     static volatile bool dumpOn;       // `kdump` toggles
+    // Opto-isolated DIY interfaces invert the line (see docs/wiring/kline-opto-schematic):
+    // invert both UART directions and the wake pulse. Saved in NVS; `klineinvert=on|off`.
+    static void setInvert(bool on);
+    static bool invert();
 
 private:
     enum State : uint8_t { S_WAKE, S_INIT, S_PROBE, S_RUN, S_WAIT };
