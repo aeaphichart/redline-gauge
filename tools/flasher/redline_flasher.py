@@ -31,6 +31,13 @@ VARIANTS = {
     "invert-dim": "Like invert + BRIGHTNESS control",
     "noinvert-dim": "Like noinvert + BRIGHTNESS control",
 }
+# Display bus speed. 80 MHz is the fast default; some CYD panels show shifted / torn
+# pictures at 80 and need 40 (still 60 fps). The 40 MHz images exist from v1.6.5.
+SPEEDS = {
+    "80": "80 MHz - fast (default)",
+    "40": "40 MHz - safe: pick this if the picture glitches / tears",
+}
+
 MODES = {
     "factory": ("0x0", "First install - erases settings and run log"),
     "update": ("0x10000", "Update - keeps settings and run log"),
@@ -76,9 +83,9 @@ def fetch_releases():
     return [r for r in rels if not r.get("draft")]
 
 
-def asset_for(release, variant, mode):
+def asset_for(release, variant, mode, spi="80"):
     tag = release["tag_name"]
-    name = f"redline-{tag}-{variant}-{mode}.bin"
+    name = f"redline-{tag}-{variant}{'-spi40' if spi == '40' else ''}-{mode}.bin"
     for a in release.get("assets", []):
         if a["name"] == name:
             return a
@@ -148,6 +155,8 @@ def cli(a):
     variants = list(VARIANTS)
     variant = a.variant or (variants[0] if a.yes else
                             variants[pick("Panel type", [f"{k:11s} {v}" for k, v in VARIANTS.items()])])
+    speeds = list(SPEEDS)
+    spi = a.spi or (speeds[0] if a.yes else speeds[pick("Display speed", list(SPEEDS.values()))])
     modes = list(MODES)
     mode = a.mode or (modes[1] if a.yes else modes[pick("Install type", [f"{k:8s} {v[1]}" for k, v in MODES.items()], 1)])
 
@@ -167,9 +176,10 @@ def cli(a):
         else:
             print("Version:")
             rel = rels[pick("Version", [r["tag_name"] for r in rels])]
-        asset = asset_for(rel, variant, mode)
+        asset = asset_for(rel, variant, mode, spi)
         if not asset:
-            sys.exit(f"{rel['tag_name']} has no '{variant}' image (invert-dim exists from v1.3.0, noinvert-dim from v1.4.1).")
+            sys.exit(f"{rel['tag_name']} has no '{variant}' {spi} MHz image (invert-dim from v1.3.0, "
+                     "noinvert-dim from v1.4.1, 40 MHz images from v1.6.5).")
         path = download(asset["browser_download_url"], log)
 
     print(f"\nFlash {os.path.basename(path)} to {port} at {MODES[mode][0]}.")
@@ -191,7 +201,7 @@ def gui(a):
             pass
     root = tk.Tk()
     root.title("REDLINE Flasher - birdlab.th")
-    root.minsize(560, 500)
+    root.minsize(560, 560)
     try:                                           # birdlab.th logo: window icon + header
         from assets import ICON_GIF, BANNER_GIF
         icon = tk.PhotoImage(data=ICON_GIF)
@@ -210,8 +220,9 @@ def gui(a):
     frm.columnconfigure(1, weight=1)
 
     ports, releases = [], []
-    port_var, ver_var, var_var, mode_var, file_var = (tk.StringVar() for _ in range(5))
+    port_var, ver_var, var_var, mode_var, file_var, spi_var = (tk.StringVar() for _ in range(6))
     var_var.set("invert")
+    spi_var.set("80")
     mode_var.set("update")
 
     def log(msg):
@@ -265,9 +276,10 @@ def gui(a):
                     rel = next((r for r in releases if r["tag_name"] == tag), None)
                     if not rel:
                         raise RuntimeError("Pick a version (or a local .bin).")
-                    asset = asset_for(rel, var_var.get(), mode_var.get())
+                    asset = asset_for(rel, var_var.get(), mode_var.get(), spi_var.get())
                     if not asset:
-                        raise RuntimeError(f"{rel['tag_name']} has no '{var_var.get()}' image.")
+                        raise RuntimeError(f"{rel['tag_name']} has no '{var_var.get()}' {spi_var.get()} MHz image "
+                                           "(40 MHz images exist from v1.6.5).")
                     path = download(asset["browser_download_url"], log)
                 flash(port, path, mode_var.get(), log, a.baud)
             except SystemExit as e:                # esptool exits on fatal errors
@@ -293,6 +305,12 @@ def gui(a):
     pf.grid(row=r, column=1, columnspan=2, sticky="w", padx=6)
     for k, v in VARIANTS.items():
         ttk.Radiobutton(pf, text=f"{k}  -  {v}", value=k, variable=var_var).pack(anchor="w")
+    r += 1
+    ttk.Label(frm, text="Display").grid(row=r, column=0, sticky="nw", pady=3)
+    sf = ttk.Frame(frm)
+    sf.grid(row=r, column=1, columnspan=2, sticky="w", padx=6)
+    for k, v in SPEEDS.items():
+        ttk.Radiobutton(sf, text=v, value=k, variable=spi_var).pack(anchor="w")
     r += 1
     ttk.Label(frm, text="Install").grid(row=r, column=0, sticky="nw", pady=3)
     mf = ttk.Frame(frm)
@@ -326,6 +344,7 @@ def main():
     ap.add_argument("--port", help="serial port, e.g. COM5 or /dev/ttyUSB0 (default: auto)")
     ap.add_argument("--variant", choices=list(VARIANTS))
     ap.add_argument("--mode", choices=list(MODES))
+    ap.add_argument("--spi", choices=list(SPEEDS), help="display bus MHz: 80 (fast) or 40 (safe)")
     ap.add_argument("--version", help="release tag, e.g. v1.4.0, or 'latest'")
     ap.add_argument("--file", help="flash a local .bin instead of downloading")
     ap.add_argument("--baud", type=int, default=460800)

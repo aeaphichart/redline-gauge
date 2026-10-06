@@ -10,6 +10,7 @@
 #   noinvert    cyd-noinvert   panel shows correct colours as-is
 #   invert-dim  esp32dev-dim   like "invert", for boards whose backlight dims (BRIGHTNESS)
 #   noinvert-dim cyd-noinvert-dim  like "noinvert", with BRIGHTNESS
+#   <any>-spi40  <env>-spi40    the same with the display SPI at 40 MHz (for panels that glitch at 80)
 #
 # Env: PIO (default: pio), PY (python that can run esptool; default: python3).
 set -euo pipefail
@@ -22,12 +23,14 @@ VER="$(sed -n 's/^#define REDLINE_VERSION "\(.*\)"/\1/p' src/config.h)"
 mkdir -p "$OUT"
 
 variant() {
-    case "$1" in
-        esp32dev)     echo invert ;;
-        cyd-noinvert) echo noinvert ;;
-        esp32dev-dim) echo invert-dim ;;
-        cyd-noinvert-dim) echo noinvert-dim ;;
-        *)            echo "$1" ;;
+    local env="$1" spi=""
+    case "$env" in *-spi40) spi="-spi40"; env="${env%-spi40}" ;; esac
+    case "$env" in
+        esp32dev)         echo "invert$spi" ;;
+        cyd-noinvert)     echo "noinvert$spi" ;;
+        esp32dev-dim)     echo "invert-dim$spi" ;;
+        cyd-noinvert-dim) echo "noinvert-dim$spi" ;;
+        *)                echo "$1" ;;
     esac
 }
 

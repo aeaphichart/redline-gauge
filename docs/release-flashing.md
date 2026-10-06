@@ -15,6 +15,7 @@
 | `…-noinvert-factory.bin` | Colours look inverted (white background) with the file above. จอสีกลับด้าน พื้นขาว |
 | `…-invert-dim-factory.bin` | Same as *invert*, with BRIGHTNESS control. บอร์ดที่หรี่ไฟจอได้ |
 | `…-noinvert-dim-factory.bin` | Same as *noinvert*, with BRIGHTNESS control. จอสีปกติ + หรี่ไฟจอได้ |
+| `…-spi40-…bin` | Same image with the display at 40 MHz instead of 80. Use it if the picture is shifted / torn / glitchy (REDLINE Flasher: Display → 40 MHz). ภาพเยื้อง/ฉีก ให้ใช้ตัว 40 MHz |
 | `…-update.bin` | Upgrading a board that already runs REDLINE: keeps settings and the run log. อัปเดตโดยไม่ล้างค่าที่ตั้งไว้ |
 
 ## How to flash / วิธีแฟลช (no compiling needed / ไม่ต้องคอมไพล์)

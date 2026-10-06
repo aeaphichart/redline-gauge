@@ -4,6 +4,14 @@ Ready-to-flash images for every version are on the [Releases page](https://githu
 (one per panel type, see [how to flash](docs/release-flashing.md)). Versions follow [semver](https://semver.org):
 new features bump the middle number, fixes the last one.
 
+## [1.6.5] - 2026-10-06
+
+### Added
+- **40 MHz display images** (`*-spi40-factory.bin` / `*-spi40-update.bin`, envs `*-spi40`).
+  - The normal images drive the display at 80 MHz. Some CYD panels show shifted / torn pictures at that speed;
+    the 40 MHz images avoid it and still run 60 fps.
+- **REDLINE Flasher: "Display" choice**, 80 MHz (fast, default) or 40 MHz (safe). Terminal: `--spi 80|40`.
+
 ## [1.6.4] - 2026-10-05
 
 ### Changed
