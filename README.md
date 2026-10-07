@@ -312,7 +312,8 @@ Fonts: Barlow Condensed and IBM Plex Mono — SIL Open Font License (`tools/font
 
 ## License
 
-**PolyForm Noncommercial 1.0.0**: see [LICENSE.md](LICENSE.md) and [NOTICE](NOTICE).
+**PolyForm Noncommercial 1.0.0**: see [LICENSE.md](LICENSE.md) and [NOTICE](NOTICE)
+(Thai summary with examples: [LICENSE.th.md](LICENSE.th.md)).
 You may use, modify and share REDLINE for free for any **noncommercial** purpose
 (personal projects, your own car, learning, research, hobby clubs).
 **Selling it or using it in a commercial product or service is not allowed.**
