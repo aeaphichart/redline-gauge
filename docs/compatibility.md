@@ -34,45 +34,90 @@ REDLINE ไม่ได้อ่านคำสั่งเฉพาะยี่
 
 **ยืนยันแล้ว:** Honda Civic e:HEV (2022+) · Toyota Hilux Revo (2019) · Mazda BT-50 (2021, 1.9 RZ4E)
 
-## กระบะ / PPV
+## แยกตามยี่ห้อ
+
+[Toyota](#toyota) · [Honda](#honda) · [Isuzu](#isuzu) · [Mazda](#mazda) · [Ford](#ford) · [Mitsubishi](#mitsubishi) · [Nissan](#nissan) · [Suzuki](#suzuki) · [MG](#mg) · [รถไฟฟ้า](#รถไฟฟ้า-ev) · [มอเตอร์ไซค์](#มอเตอร์ไซค์)
+
+### Toyota
 
 | รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
 |---|---|---|---|---|
-| **Mazda BT-50 (2021+, 1.9 RZ4E)** | ✅ | CAN 500k | **ยืนยันแล้ว** (ต.ค. 2026) เกจขึ้นครบทุกค่า อัปเดตไว · ตัวรถและเครื่องเดียวกับ Isuzu D-Max รุ่นที่ 3 | ยืนยัน |
-| Isuzu D-Max 1.9 Blue Power (2020+, RZ4E) · MU-X 1.9 (2021+) | 🟢 | CAN 500k | แพลตฟอร์ม เครื่อง และระบบไฟเดียวกับ BT-50 2021 ที่ยืนยันแล้ว ควรได้เหมือนกัน | สูง |
-| Isuzu D-Max 3.0 (2020+, 4JJ3) · MU-X 3.0 (2021+) · BT-50 3.0 (2021+) | 🟢 | CAN 500k | แพลตฟอร์มเดียวกัน ต่างแค่เครื่อง ECU ตระกูล Isuzu เดียวกัน | สูง |
-| Isuzu D-Max 1.9 Blue Power (2016–2019, RZ4E) · MU-X 1.9 (2016–2020) | 🟢 | CAN 500k | เครื่อง RZ4E ตัวเดียวกับ BT-50 2021 ที่ยืนยันแล้ว แต่ตัวรถรุ่นก่อน (ECU รุ่นเก่ากว่า) | กลาง–สูง |
-| Isuzu D-Max 2.5/3.0 (2012–2019) · MU-X (2013–2020) | 🟡 | CAN 500k | ยุค CAN เดียวกัน น่าจะได้ ค่าไอดีของดีเซล Isuzu รุ่นนี้ยังไม่ยืนยัน | กลาง |
-| Isuzu D-Max รุ่นแรก (2003–2011) | 🟡 / ❌ | 2007+ CAN, ก่อนนั้นไม่แน่นอน | คอมมอนเรล 2007+ ร้านในไทยบอกว่า ELM327 ใช้ได้ ส่วนก่อน 2007 น่าจะไม่ได้ ใช้โปรโตคอลเฉพาะยี่ห้อ | ต่ำ |
-| Toyota Hilux **Vigo** / Fortuner (2004–2015, 1KD/2KD) | 🟡 | K-Line (ISO 14230) รุ่นแรก, รุ่นหลังอาจเป็น CAN | ค่าครบ แต่ K-Line ช้ากว่า (ค่าอัปเดตไม่กี่ครั้งต่อวินาที) และหาเครื่องนานหลายวินาที ([OBD Planet](https://obdplanet.com/obd2-protocol/)) | กลาง |
 | **Toyota Hilux Revo (2019, 2.4/2.8 GD)** | ✅ | CAN 500k | **ยืนยันแล้ว** (ต.ค. 2026) เสียบ ELM327 ค่าขึ้นจอเลย | ยืนยัน |
 | Toyota Hilux Revo ปีอื่น (2015–2024 รวม Rocco / Z Edition), Fortuner (2015+) | 🟢 | CAN 500k | แพลตฟอร์มและเครื่อง GD ตระกูลเดียวกับ Revo 2019 ที่ยืนยันแล้ว ควรได้เหมือนกัน ([OBDb Hilux](https://github.com/OBDb/Toyota-Hilux)) · ELM327 ก๊อปเกรดต่ำบางตัวต่อไม่ติด | สูง |
 | Toyota Innova Crysta, Hiace / Commuter (2019+), Hilux Champ ดีเซล (2023+) | 🟢 | CAN 500k | ใช้เครื่องดีเซล GD และระบบไฟยุคเดียวกับ Revo น่าจะได้ค่าเหมือนกัน ยังไม่มีคนลอง | กลาง |
-| Ford Ranger T6 (2012+, รวม 2.0 Bi-Turbo), Everest | 🟢 | CAN 500k | ([Pelican](https://pelican.clutch.engineering/cars/ford/ranger/)) | สูง |
-| Mazda BT-50 Pro (2012–2020) | 🟢 | CAN 500k | รุ่นนี้ใช้พื้นฐาน Ford Ranger (ไม่ใช่ Isuzu) ระบบไฟเดียวกับ Ranger | กลาง |
-| Mitsubishi Triton (2005–2014, 4D56) | 🟢 | CAN 500k (2006+) | ([pinout](https://pinoutguide.com/CarElectronics/mitsubishi_obd2_daig_pinout.shtml)) | กลาง–สูง |
-| Mitsubishi Triton (2015+), Pajero Sport | 🟢 | CAN 500k | ([Pelican](https://pelican.clutch.engineering/cars/mitsubishi/l200/)) | กลาง–สูง |
-| Nissan Navara D40 (2007–2014) | 🟡 | CAN 500k | รายงานไม่ตรงกัน บางคันใช้ได้ บางคันขึ้นว่าต่อ ECU ไม่ได้ ([navaraforum](https://www.navaraforum.com/threads/obd-torque-app.14050/)) · D22 รุ่นเก่า ❌ | กลาง |
-| Nissan Navara NP300 (2014+) | 🟢 | CAN 500k | ไม่เจอรายงานว่ามีปัญหา | กลาง |
+| Toyota Hilux **Vigo** / Fortuner (2004–2015, 1KD/2KD) | 🟡 | K-Line (ISO 14230) รุ่นแรก, รุ่นหลังอาจเป็น CAN | ค่าครบ แต่ K-Line ช้ากว่า (ค่าอัปเดตไม่กี่ครั้งต่อวินาที) และหาเครื่องนานหลายวินาที ([OBD Planet](https://obdplanet.com/obd2-protocol/)) | กลาง |
+| Toyota Corolla Altis, Camry, Corolla Cross (เครื่องยนต์) | 🟢 | CAN 500k | มาตรฐาน | สูง |
+| Toyota **Camry Hybrid** (2012–2018 XV50, 2018+ XV70) | 🟡 | CAN 500k | รอบ ความเร็ว น้ำหล่อเย็น ไอดี ลิ้นเร่ง แบต 12V ได้ แต่ **ไม่มี % แบตไฮบริด** (Toyota เก็บไว้ในคำสั่งเฉพาะยี่ห้อ) · รอบเป็น 0 ตอนวิ่งไฟฟ้า · ตั้ง GEAR OFF และ PANEL STD | สูง |
+| Toyota Altis / Corolla Cross / Yaris Cross **Hybrid** | 🟡 | CAN 500k | เหมือน Camry Hybrid: ไม่มี % แบตไฮบริด ([OBDb](https://github.com/OBDb/Toyota-Corolla-Cross)) · ตั้ง GEAR OFF และ PANEL STD | สูง |
+| Toyota Vios (2013+), Yaris ATIV (2017+) | 🟢 | CAN 500k | ช่วงปี 2007–2010 ยังไม่แน่ใจว่าเป็น K-Line หรือ CAN · เกียร์ CVT ตั้ง GEAR OFF | กลาง |
+| Toyota Vios / Yaris (2002–2013) | 🟡 | K-Line (ISO 9141) | ค่าครบแต่ช้า หาเครื่องนาน ~10 วินาที | กลาง |
 
-## รถเก๋ง
+### Honda
 
-| รุ่น | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
+| รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
 |---|---|---|---|---|
 | **Honda Civic e:HEV (FE, 2022+)** | ✅ | CAN 500k | **ยืนยันแล้ว** ได้ค่าครบรวม HV BATT / HV POWER (หน้า PANEL HYB) ไม่มีค่าไอดี · ตั้ง GEAR OFF · ตอนวิ่งไฟฟ้าล้วนรอบเป็น 0 | ยืนยัน |
 | Honda City / HR-V / Accord **e:HEV** | 🟢 | CAN 500k | ระบบไฮบริดตระกูลเดียวกับ Civic e:HEV คาดว่าเหมือนกัน · ตั้ง GEAR OFF | กลาง–สูง |
 | Honda Civic FB / FC / FE (เครื่องยนต์), Accord, HR-V, CR-V, City / Jazz (2008+) | 🟢 | CAN 500k | มาตรฐาน | สูง |
 | Honda Civic FD (2006–2011) | 🟢 | CAN 29-bit | ELM327 ก๊อปเกรดต่ำบางตัวต้องลองหลายรอบ ([civinfo](https://www.civinfo.com/threads/obd2-and-torque.96748/)) | กลาง–สูง |
 | Honda City / Jazz GD (2003–2008) | 🟡 | K-Line (บางคันปลายรุ่นเป็น CAN) | ช้า ([fitfreak](https://www.fitfreak.net/forums/1st-generation-gd-01-08/93217-obd2-bluetooth-dongle-one-works.html)) | กลาง |
-| Toyota Corolla Altis, Camry, Corolla Cross (เครื่องยนต์) | 🟢 | CAN 500k | มาตรฐาน | สูง |
-| Toyota Altis / Camry / Corolla Cross **Hybrid** | 🟡 | CAN 500k | รอบ ความเร็ว น้ำหล่อเย็น ไอดี ได้ แต่ **ไม่มี % แบตไฮบริด** เพราะ Toyota เก็บไว้ในคำสั่งเฉพาะยี่ห้อ ([OBDb](https://github.com/OBDb/Toyota-Corolla-Cross)) · ตั้ง GEAR OFF และ PANEL STD | สูง |
-| Toyota Vios / Yaris (2002–2013) | 🟡 | K-Line (ISO 9141) | ค่าครบแต่ช้า หาเครื่องนาน ~10 วินาที | กลาง |
-| Toyota Vios (2013+), Yaris ATIV (2017+) | 🟢 | CAN 500k | ช่วงปี 2007–2010 ยังไม่แน่ใจว่าเป็น K-Line หรือ CAN | กลาง |
+
+### Isuzu
+
+> ✅ **Mazda BT-50 (2021+)** ยืนยันแล้ว เป็นตัวรถและเครื่องเดียวกับ D-Max รุ่นที่ 3 (ดู [Mazda](#mazda))
+
+| รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
+|---|---|---|---|---|
+| Isuzu D-Max 1.9 Blue Power (2020+, RZ4E) · MU-X 1.9 (2021+) | 🟢 | CAN 500k | แพลตฟอร์ม เครื่อง และระบบไฟเดียวกับ BT-50 2021 ที่ยืนยันแล้ว ควรได้เหมือนกัน | สูง |
+| Isuzu D-Max 3.0 (2020+, 4JJ3) · MU-X 3.0 (2021+) · BT-50 3.0 (2021+) | 🟢 | CAN 500k | แพลตฟอร์มเดียวกัน ต่างแค่เครื่อง ECU ตระกูล Isuzu เดียวกัน | สูง |
+| Isuzu D-Max 1.9 Blue Power (2016–2019, RZ4E) · MU-X 1.9 (2016–2020) | 🟢 | CAN 500k | เครื่อง RZ4E ตัวเดียวกับ BT-50 2021 ที่ยืนยันแล้ว แต่ตัวรถรุ่นก่อน (ECU รุ่นเก่ากว่า) | กลาง–สูง |
+| Isuzu D-Max 2.5/3.0 (2012–2019) · MU-X (2013–2020) | 🟡 | CAN 500k | ยุค CAN เดียวกัน น่าจะได้ ค่าไอดีของดีเซล Isuzu รุ่นนี้ยังไม่ยืนยัน | กลาง |
+| Isuzu D-Max รุ่นแรก (2003–2011) | 🟡 / ❌ | 2007+ CAN, ก่อนนั้นไม่แน่นอน | คอมมอนเรล 2007+ ร้านในไทยบอกว่า ELM327 ใช้ได้ ส่วนก่อน 2007 น่าจะไม่ได้ ใช้โปรโตคอลเฉพาะยี่ห้อ | ต่ำ |
+
+### Mazda
+
+| รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
+|---|---|---|---|---|
+| **Mazda BT-50 (2021+, 1.9 RZ4E)** | ✅ | CAN 500k | **ยืนยันแล้ว** (ต.ค. 2026) เกจขึ้นครบทุกค่า อัปเดตไว · ตัวรถและเครื่องเดียวกับ Isuzu D-Max รุ่นที่ 3 | ยืนยัน |
+| Mazda BT-50 Pro (2012–2020) | 🟢 | CAN 500k | รุ่นนี้ใช้พื้นฐาน Ford Ranger (ไม่ใช่ Isuzu) ระบบไฟเดียวกับ Ranger | กลาง |
 | Mazda 2 / 3 / CX-3 / CX-30 / CX-5 (Skyactiv 2012+) | 🟢 | CAN 500k | ไม่เจอรายงานว่ามีปัญหา | สูง |
-| Nissan Almera / March / Sylphy (2010+) | 🟢 | CAN 500k | | กลาง–สูง |
-| Nissan Note / Kicks **e-Power** | 🟡 | CAN 500k | รอบ = รอบเครื่องปั่นไฟ (เป็น 0 ตอนเครื่องดับ) · ไม่มีค่าแบต · ตั้ง GEAR OFF ([minkara](https://minkara.carview.co.jp/userid/2898927/car/2518034/4634660/note.aspx)) | กลาง |
+
+### Ford
+
+> Mazda BT-50 Pro (2012–2020) สร้างบน Ranger T6 ใช้ได้เหมือนกัน (ดู [Mazda](#mazda))
+
+| รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
+|---|---|---|---|---|
+| Ford Ranger T6 (2012+, รวม 2.0 Bi-Turbo), Everest | 🟢 | CAN 500k | ([Pelican](https://pelican.clutch.engineering/cars/ford/ranger/)) | สูง |
+
+### Mitsubishi
+
+| รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
+|---|---|---|---|---|
+| Mitsubishi Triton (2005–2014, 4D56) | 🟢 | CAN 500k (2006+) | ([pinout](https://pinoutguide.com/CarElectronics/mitsubishi_obd2_daig_pinout.shtml)) | กลาง–สูง |
+| Mitsubishi Triton (2015+), Pajero Sport | 🟢 | CAN 500k | ([Pelican](https://pelican.clutch.engineering/cars/mitsubishi/l200/)) | กลาง–สูง |
 | Mitsubishi Mirage / Attrage, Xpander | 🟢 | CAN 500k | ([mirageforum](https://mirageforum.com/forum/showthread.php/6711-OBD2-ELM-327-Mini)) | สูง |
+
+### Nissan
+
+| รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
+|---|---|---|---|---|
+| Nissan Navara D40 (2007–2014) | 🟡 | CAN 500k | รายงานไม่ตรงกัน บางคันใช้ได้ บางคันขึ้นว่าต่อ ECU ไม่ได้ ([navaraforum](https://www.navaraforum.com/threads/obd-torque-app.14050/)) · D22 รุ่นเก่า ❌ | กลาง |
+| Nissan Navara NP300 (2014+) | 🟢 | CAN 500k | ไม่เจอรายงานว่ามีปัญหา | กลาง |
+| Nissan **Almera N17 (2011–2019, 1.2 HR12DE)** · March K13 (2010–2022) | 🟢 | CAN 500k | ค่ามาตรฐานครบ · เกียร์ **CVT ตั้ง GEAR OFF** (เกียร์ธรรมดาใช้ GEAR AUTO ได้) · ไม่มีอุณหภูมิน้ำมันเกียร์ CVT (ไม่ใช่ค่ามาตรฐาน) | กลาง–สูง |
+| Nissan Almera (2020+, 1.0 Turbo), Sylphy, Kicks เครื่องยนต์ | 🟢 | CAN 500k | มาตรฐาน · เกียร์ CVT ตั้ง GEAR OFF | กลาง–สูง |
+| Nissan Note / Kicks **e-Power** | 🟡 | CAN 500k | รอบ = รอบเครื่องปั่นไฟ (เป็น 0 ตอนเครื่องดับ) · ไม่มีค่าแบต · ตั้ง GEAR OFF ([minkara](https://minkara.carview.co.jp/userid/2898927/car/2518034/4634660/note.aspx)) | กลาง |
+
+### Suzuki
+
+| รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
+|---|---|---|---|---|
 | Suzuki Swift / Ciaz / Ertiga (2012+) | 🟡 | CAN 500k | มีรายงานว่า ELM327 ก๊อปบางตัวคุยกับรถไม่ได้ ([tsikot](https://www.tsikot.com/forums/suzuki-cars-talk-82/obd2-diagnostic-scanner-suzuki-102623/index2.html)) | กลาง–ต่ำ |
+
+### MG
+
+| รุ่น (ปี / เครื่อง) | ผล | โปรโตคอล | ข้อสังเกต | มั่นใจ |
+|---|---|---|---|---|
 | MG ZS / MG3 / MG5 / HS (เครื่องยนต์, 2017+) | 🟡 | น่าจะ CAN 500k | ยังไม่เจอรายงานการอ่านค่าจริง | ต่ำ |
 
 ## รถไฟฟ้า (EV)
@@ -105,13 +150,14 @@ REDLINE ไม่ได้อ่านคำสั่งเฉพาะยี่
 
 1. **รถไทยปี ~2008 ขึ้นไป** เกือบทั้งหมดใช้ CAN 500k จอหาโปรโตคอลให้เอง
 2. **รถ K-Line** (ราวปี 2002–2008) ใช้ได้แต่ช้า ช่วง `ECU SEARCH` นานหลายวินาที และค่าอัปเดตไม่กี่ครั้งต่อวินาที
-3. **ไฮบริด:**
+3. **เกียร์ CVT / e-CVT** (Almera, Vios, Yaris, ไฮบริด): เลขเกียร์คำนวณไม่ได้ ตั้ง **GEAR OFF**
+4. **ไฮบริด:**
    - รอบที่อ่านได้คือรอบเครื่องยนต์ เป็น 0 ตอนวิ่งไฟฟ้า
    - ตั้ง **GEAR OFF**
    - หน้า HYB (% แบต / kW) ใช้ได้กับ **Honda e:HEV** เท่านั้น
-4. **ดีเซล** บางรุ่นไม่มีค่าไอดี ช่อง INTAKE จะขึ้น `--`
-5. **ต้องบิดกุญแจ ON หรือสตาร์ทเครื่อง** ACC อย่างเดียวไม่พอ
-6. **ตัว ELM327** ต้องเป็น **Bluetooth Classic** รุ่นที่เป็น BLE อย่างเดียว (เช่นรุ่นที่ใช้กับ iPhone ได้) ใช้ไม่ได้ และตัดมือถือออกจาก ELM327 ก่อนต่อ ดู [README หัวข้อ OBD BT](../README.th.md)
+5. **ดีเซล** บางรุ่นไม่มีค่าไอดี ช่อง INTAKE จะขึ้น `--`
+6. **ต้องบิดกุญแจ ON หรือสตาร์ทเครื่อง** ACC อย่างเดียวไม่พอ
+7. **ตัว ELM327** ต้องเป็น **Bluetooth Classic** รุ่นที่เป็น BLE อย่างเดียว (เช่นรุ่นที่ใช้กับ iPhone ได้) ใช้ไม่ได้ และตัดมือถือออกจาก ELM327 ก่อนต่อ ดู [README หัวข้อ OBD BT](../README.th.md)
 
 ---
 
